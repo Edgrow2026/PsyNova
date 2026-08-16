@@ -22,7 +22,14 @@ import {
   Lock,
   Search,
   Server,
-  Home
+  Home,
+  Video,
+  Phone,
+  Mail,
+  ExternalLink,
+  MessageSquare,
+  Filter,
+  Clock,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -37,16 +44,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
     reviews,
     complaints,
     platformSettings,
+    patients,
     updateDoctorStatus,
     boostPsychiatrist,
     unboostPsychiatrist,
     flagReview,
     resolveComplaint,
     markPayoutPaid,
+    cancelBooking,
+    completeBooking,
     updatePlatformSettings,
   } = usePsyNova();
 
   const [currentSubTab, setCurrentSubTab] = useState<string>(activeSubTab);
+  const [selectedPatientFilter, setSelectedPatientFilter] = useState<string>('');
+  const [patientSearchQuery, setPatientSearchQuery] = useState<string>('');
+  const [bookingSearchQuery, setBookingSearchQuery] = useState<string>('');
 
   // Boost action message
   const [boostMsg, setBoostMsg] = useState<string | null>(null);
@@ -61,12 +74,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
   // Admin Nav Links
   const adminLinks = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'bookings', label: 'All Bookings', icon: CalendarIcon },
+    { id: 'users', label: 'Patient Accounts', icon: Users },
     { id: 'psychiatrists', label: 'SLMC & Doctors', icon: Stethoscope },
     { id: 'reviews', label: 'Reviews Audit', icon: Star },
     { id: 'complaints', label: 'Complaints Queue', icon: ShieldAlert },
     { id: 'payments', label: 'Financial Payouts', icon: CreditCard },
     { id: 'calendar', label: 'Admin Calendar', icon: CalendarIcon },
-    { id: 'users', label: 'Patient Accounts', icon: Users },
     { id: 'settings', label: 'Platform Settings', icon: Settings },
   ];
 
@@ -165,10 +179,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
         <div className="space-y-8">
           {/* Stat Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="psynova-card p-6 space-y-1">
-              <span className="text-xs font-semibold text-[#6B7D5E] uppercase tracking-wider">Total Bookings</span>
-              <p className="text-3xl font-extrabold text-[#2D3728] font-mono">{totalBookings}</p>
-              <span className="text-[11px] text-[#2D3728]/60">Platform-wide sessions</span>
+            <div
+              onClick={() => {
+                setSelectedPatientFilter('');
+                setCurrentSubTab('bookings');
+              }}
+              className="psynova-card p-6 space-y-1 cursor-pointer hover:border-[#768c6e] hover:shadow-lg transition-all group relative overflow-hidden"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#6B7D5E] uppercase tracking-wider">Total Bookings</span>
+                <span className="text-[10px] font-bold text-[#768c6e] bg-[#768c6e]/15 px-2 py-0.5 rounded-full group-hover:bg-[#768c6e] group-hover:text-white transition-colors">
+                  View All →
+                </span>
+              </div>
+              <p className="text-3xl font-extrabold text-[#2D3728] font-mono group-hover:text-[#6B7D5E] transition-colors">{totalBookings}</p>
+              <span className="text-[11px] text-[#2D3728]/70 font-medium">Click to open Bookings & Patient Details</span>
             </div>
 
             <div className="psynova-card p-6 space-y-1">
@@ -589,16 +614,335 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
         </div>
       )}
 
+      {/* SUB-PAGE 2: ALL BOOKINGS & PATIENT DETAILS */}
+      {currentSubTab === 'bookings' && (
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-[#2D3728] flex items-center gap-2">
+                <CalendarIcon className="w-6 h-6 text-[#768c6e]" /> All Platform Bookings & Patient Details
+              </h2>
+              <p className="text-xs text-[#2D3728]/70">
+                View all consultation appointments, patient contact information, payment status, and video links.
+              </p>
+            </div>
+
+            {selectedPatientFilter && (
+              <div className="flex items-center gap-2 bg-amber-100 border border-amber-300 text-amber-900 px-3 py-1.5 rounded-xl text-xs font-semibold">
+                <span>Filtered for Patient: <strong>{selectedPatientFilter}</strong></span>
+                <button
+                  onClick={() => setSelectedPatientFilter('')}
+                  className="p-1 rounded-full hover:bg-amber-200 text-amber-900 font-bold"
+                  title="Clear Patient Filter"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3.5 top-3 text-[#2D3728]/40" />
+              <input
+                type="text"
+                placeholder="Search by Patient Name, Email, Doctor, Booking ID, or PayHere Ref..."
+                value={bookingSearchQuery}
+                onChange={(e) => setBookingSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+              />
+            </div>
+            {selectedPatientFilter && (
+              <button
+                onClick={() => setSelectedPatientFilter('')}
+                className="btn-outline text-xs px-4 py-2 rounded-xl flex items-center gap-1.5"
+              >
+                Show All Patients
+              </button>
+            )}
+          </div>
+
+          {/* Bookings List */}
+          {(() => {
+            const filteredBookings = bookings.filter((b) => {
+              const matchesPatient = !selectedPatientFilter || b.patientEmail.toLowerCase() === selectedPatientFilter.toLowerCase() || b.patientName.toLowerCase().includes(selectedPatientFilter.toLowerCase());
+              const query = bookingSearchQuery.toLowerCase().trim();
+              const matchesQuery = !query ||
+                b.id.toLowerCase().includes(query) ||
+                b.patientName.toLowerCase().includes(query) ||
+                b.patientEmail.toLowerCase().includes(query) ||
+                b.patientContact.includes(query) ||
+                b.doctorName.toLowerCase().includes(query) ||
+                (b.payhereRef && b.payhereRef.toLowerCase().includes(query));
+
+              return matchesPatient && matchesQuery;
+            });
+
+            if (filteredBookings.length === 0) {
+              return (
+                <div className="p-8 text-center bg-[#F7F5EF] rounded-2xl border border-[#768c6e]/20 space-y-3">
+                  <p className="text-sm font-semibold text-[#2D3728]">No bookings found matching criteria.</p>
+                  <p className="text-xs text-[#2D3728]/60">Try clearing filters or search query.</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-xs font-semibold text-[#2D3728]/80 px-1">
+                  <span>Showing {filteredBookings.length} booking(s)</span>
+                  <span className="font-mono text-[#6B7D5E]">
+                    Total Value: LKR {filteredBookings.reduce((sum, b) => sum + b.feeLkr, 0).toLocaleString()}
+                  </span>
+                </div>
+
+                {filteredBookings.map((b) => {
+                  const doc = psychiatrists.find((d) => d.id === b.doctorId);
+                  const dateObj = new Date(b.slotDatetime);
+                  const formattedDate = dateObj.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  });
+                  const formattedTime = dateObj.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
+
+                  return (
+                    <div
+                      key={b.id}
+                      className="p-5 sm:p-6 rounded-2xl bg-[#F7F5EF] border border-[#768c6e]/20 space-y-4 shadow-sm hover:border-[#768c6e]/50 transition-all"
+                    >
+                      {/* Top Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#768c6e]/15">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-extrabold text-sm text-[#2D3728]">{b.id}</span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              b.status === 'confirmed'
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                : b.status === 'completed'
+                                ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                : b.status === 'cancelled'
+                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                : 'bg-amber-100 text-amber-800 border border-amber-300'
+                            }`}
+                          >
+                            {b.status}
+                          </span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              b.paymentStatus === 'paid'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : b.paymentStatus === 'payout_completed'
+                                ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}
+                          >
+                            PayHere: {b.paymentStatus}
+                          </span>
+                        </div>
+                        <div className="text-xs text-[#2D3728]/70 font-medium flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-[#768c6e]" />
+                          <span>{formattedDate} at {formattedTime}</span>
+                        </div>
+                      </div>
+
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        {/* Patient Details */}
+                        <div className="p-3.5 rounded-xl bg-white border border-[#768c6e]/15 space-y-1.5">
+                          <div className="flex justify-between items-center border-b border-[#768c6e]/10 pb-1">
+                            <span className="font-bold text-[#6B7D5E] uppercase text-[10px]">Registered Patient Details</span>
+                            <span className="font-mono text-[10px] text-[#2D3728]/60">{b.patientId || 'PN-PAT-88421'}</span>
+                          </div>
+                          <p className="font-bold text-sm text-[#2D3728]">{b.patientName}</p>
+                          <div className="text-[#2D3728]/80 space-y-0.5">
+                            <p className="flex items-center gap-1">
+                              <Mail className="w-3 h-3 text-[#768c6e]" /> {b.patientEmail}
+                            </p>
+                            <p className="flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-[#768c6e]" /> {b.patientContact}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Psychiatrist Details */}
+                        <div className="p-3.5 rounded-xl bg-white border border-[#768c6e]/15 space-y-1.5">
+                          <div className="flex justify-between items-center border-b border-[#768c6e]/10 pb-1">
+                            <span className="font-bold text-[#6B7D5E] uppercase text-[10px]">SLMC Practitioner</span>
+                            <span className="font-mono text-[10px] text-[#2D3728]/60">{doc?.slmcRegNo || 'SLMC Verified'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {doc?.photo && (
+                              <img src={doc.photo} alt={doc.name} className="w-7 h-7 rounded-lg object-cover" />
+                            )}
+                            <div>
+                              <p className="font-bold text-sm text-[#2D3728]">{b.doctorName}</p>
+                              <p className="text-[10px] text-[#2D3728]/70">{doc?.title || 'Consultant Psychiatrist'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Financial & Telehealth Row */}
+                      <div className="p-3.5 rounded-xl bg-white/60 border border-[#768c6e]/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-[#2D3728]">
+                            Session Fee: <span className="font-mono font-bold text-[#6B7D5E]">LKR {b.feeLkr.toLocaleString()}</span>
+                          </p>
+                          <p className="text-[10px] text-[#2D3728]/70 font-mono">
+                            Commission ({platformSettings.commissionRate}%): LKR {b.platformCommissionLkr.toLocaleString()} | Earning: LKR {b.netDoctorEarningLkr.toLocaleString()}
+                          </p>
+                          {b.payhereRef && (
+                            <p className="text-[10px] text-[#2D3728]/60 font-mono">
+                              PayHere Gateway Ref: {b.payhereRef}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {b.videoLink && (
+                            <a
+                              href={b.videoLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-xl bg-[#768c6e] text-white font-bold text-[11px] flex items-center gap-1.5 hover:bg-[#2D3728] transition-colors"
+                            >
+                              <Video className="w-3.5 h-3.5" /> Join Telehealth Room
+                            </a>
+                          )}
+
+                          {b.status === 'confirmed' && (
+                            <>
+                              <button
+                                onClick={() => completeBooking(b.id)}
+                                className="px-3 py-1.5 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold text-[11px] transition-colors"
+                              >
+                                Complete Session
+                              </button>
+                              <button
+                                onClick={() => cancelBooking(b.id, 'Cancelled by platform admin')}
+                                className="px-3 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold text-[11px] transition-colors"
+                              >
+                                Cancel Session
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {/* SUB-PAGE 7: PATIENT ACCOUNTS */}
       {currentSubTab === 'users' && (
         <div className="space-y-6">
-          <h2 className="text-xl font-bold text-[#2D3728]">Registered Patient Accounts</h2>
-          <div className="p-4 rounded-2xl bg-[#F7F5EF] border border-[#768c6e]/20 space-y-2 text-xs">
-            <div className="flex justify-between items-center font-bold text-sm text-[#2D3728]">
-              <span>Dilshan Silva (Client ID: PN-PAT-88421)</span>
-              <span className="text-emerald-700">Active Patient</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-[#2D3728] flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#768c6e]" /> Registered Patient Accounts ({patients.length})
+              </h2>
+              <p className="text-xs text-[#2D3728]/70">
+                All patient profiles registered on PsyNova, including active account statuses and booking metrics.
+              </p>
             </div>
-            <p className="text-[#2D3728]/70">Email: dilshan.silva@example.lk | Mobile: +94 77 123 4567</p>
+          </div>
+
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3.5 top-3 text-[#2D3728]/40" />
+            <input
+              type="text"
+              placeholder="Search patients by name, email, mobile, client ID or district..."
+              value={patientSearchQuery}
+              onChange={(e) => setPatientSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+            />
+          </div>
+
+          {/* Patients List Grid */}
+          <div className="space-y-3">
+            {(() => {
+              const query = patientSearchQuery.toLowerCase().trim();
+              const filteredPatients = patients.filter(
+                (p) =>
+                  !query ||
+                  p.name.toLowerCase().includes(query) ||
+                  p.email.toLowerCase().includes(query) ||
+                  p.phone.includes(query) ||
+                  p.clientId.toLowerCase().includes(query) ||
+                  p.district.toLowerCase().includes(query)
+              );
+
+              if (filteredPatients.length === 0) {
+                return (
+                  <div className="p-8 text-center bg-[#F7F5EF] rounded-2xl border border-[#768c6e]/20 space-y-2">
+                    <p className="text-sm font-semibold text-[#2D3728]">No patient accounts found.</p>
+                  </div>
+                );
+              }
+
+              return filteredPatients.map((pat) => {
+                const patientBookings = bookings.filter(
+                  (b) => b.patientEmail.toLowerCase() === pat.email.toLowerCase() || b.patientName.toLowerCase() === pat.name.toLowerCase()
+                );
+
+                return (
+                  <div
+                    key={pat.id}
+                    className="p-5 rounded-2xl bg-[#F7F5EF] border border-[#768c6e]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:border-[#768c6e]/40 transition-all shadow-sm"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-[#2D3728]">{pat.name}</span>
+                        <span className="font-mono text-[11px] bg-[#768c6e]/20 px-2 py-0.5 rounded text-[#2D3728]">
+                          {pat.clientId}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          {pat.status}
+                        </span>
+                      </div>
+                      <p className="text-[#2D3728]/80 flex flex-wrap items-center gap-3">
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-[#768c6e]" /> {pat.email}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-[#768c6e]" /> {pat.phone}
+                        </span>
+                        <span>District: <strong>{pat.district}</strong></span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-[10px] font-semibold text-[#6B7D5E] uppercase">Total Bookings</p>
+                        <p className="text-base font-extrabold text-[#2D3728] font-mono">{patientBookings.length}</p>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setSelectedPatientFilter(pat.email);
+                          setCurrentSubTab('bookings');
+                        }}
+                        className="btn-primary text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-sm"
+                      >
+                        <CalendarIcon className="w-3.5 h-3.5" /> View Bookings ({patientBookings.length})
+                      </button>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
       )}

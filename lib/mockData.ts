@@ -1,4 +1,4 @@
-import { Psychiatrist, Review, Booking, Complaint, PlatformSettings } from './types';
+import { Psychiatrist, Review, Booking, Complaint, PlatformSettings, PatientAccount } from './types';
 
 export const initialPlatformSettings: PlatformSettings = {
   commissionRate: 18,
@@ -296,5 +296,58 @@ export const initialComplaints: Complaint[] = [
     details: 'During the last 10 minutes of our session, network latency in Kandy caused audio drops. Requesting partial resolution.',
     status: 'Pending',
     createdAt: '2026-08-06T09:30:00Z',
+  },
+];
+
+export const initialPatients: PatientAccount[] = [
+  {
+    id: 'pat-1',
+    clientId: 'PN-PAT-88421',
+    name: 'Dilshan Silva',
+    email: 'dilshan.silva@example.lk',
+    phone: '+94 77 123 4567',
+    district: 'Colombo',
+    status: 'Active',
+    createdAt: '2026-08-01T08:00:00Z',
+  },
+  {
+    id: 'pat-2',
+    clientId: 'PN-PAT-90112',
+    name: 'Malini S. Perera',
+    email: 'malini.perera@example.lk',
+    phone: '+94 71 888 2341',
+    district: 'Colombo',
+    status: 'Active',
+    createdAt: '2026-08-02T11:15:00Z',
+  },
+  {
+    id: 'pat-3',
+    clientId: 'PN-PAT-91402',
+    name: 'Karthik Nadesan',
+    email: 'karthik.n@example.lk',
+    phone: '+94 76 554 1120',
+    district: 'Jaffna',
+    status: 'Active',
+    createdAt: '2026-08-05T09:30:00Z',
+  },
+  {
+    id: 'pat-4',
+    clientId: 'PN-PAT-92310',
+    name: 'Dinuka Pathirana',
+    email: 'dinuka.p@example.lk',
+    phone: '+94 77 900 1188',
+    district: 'Kandy',
+    status: 'Active',
+    createdAt: '2026-08-07T14:20:00Z',
+  },
+  {
+    id: 'pat-5',
+    clientId: 'PN-PAT-93501',
+    name: 'Harasthi Mendis',
+    email: 'harasthi.m@example.lk',
+    phone: '+94 70 331 4490',
+    district: 'Kurunegala',
+    status: 'Active',
+    createdAt: '2026-08-09T16:45:00Z',
   },
 ];

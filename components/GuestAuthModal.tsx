@@ -20,7 +20,7 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
   onClose,
   onAuthSuccess,
 }) => {
-  const { setUserRole } = usePsyNova();
+  const { setUserRole, registerPatient } = usePsyNova();
   const [tab, setTab] = useState<'signup' | 'signin'>('signup');
 
   // Form Fields
@@ -40,11 +40,22 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
     // Authenticate as Patient
     setUserRole('patient');
 
+    const patientName = name.trim() || 'Dilshan Silva';
+    const patientEmail = email.trim() || 'dilshan.silva@example.lk';
+    const patientContact = contact.trim() || '+94 77 123 4567';
+
+    registerPatient({
+      name: patientName,
+      email: patientEmail,
+      phone: patientContact,
+      district,
+    });
+
     // Notify parent to proceed to PayHereCheckoutModal with user's info
     onAuthSuccess({
-      name: name.trim() || 'Dilshan Silva',
-      email: email.trim() || 'dilshan.silva@example.lk',
-      contact: contact.trim() || '+94 77 123 4567',
+      name: patientName,
+      email: patientEmail,
+      contact: patientContact,
     });
   };
 

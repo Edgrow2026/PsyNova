@@ -10,6 +10,7 @@ import {
   Complaint,
   PlatformSettings,
   BoostTier,
+  PatientAccount,
 } from './types';
 import {
   initialPlatformSettings,
@@ -17,6 +18,7 @@ import {
   initialBookings,
   initialReviews,
   initialComplaints,
+  initialPatients,
 } from './mockData';
 
 interface PsyNovaContextType {
@@ -29,6 +31,8 @@ interface PsyNovaContextType {
   reviews: Review[];
   complaints: Complaint[];
   platformSettings: PlatformSettings;
+  patients: PatientAccount[];
+  registerPatient: (patientData: { name: string; email: string; phone: string; district?: string }) => PatientAccount;
   
   // Actions
   boostPsychiatrist: (doctorId: string, tier: BoostTier) => { success: boolean; message: string };
@@ -150,6 +154,41 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return initialPlatformSettings;
   });
 
+  const [patients, setPatients] = useState<PatientAccount[]>(() => {
+    if (typeof window === 'undefined') return initialPatients;
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.patients && Array.isArray(parsed.patients)) return parsed.patients;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return initialPatients;
+  });
+
+  const registerPatient = (patientData: { name: string; email: string; phone: string; district?: string }): PatientAccount => {
+    const existing = patients.find((p) => p.email.toLowerCase() === patientData.email.toLowerCase());
+    if (existing) {
+      return existing;
+    }
+
+    const newPatient: PatientAccount = {
+      id: `pat-${Date.now()}`,
+      clientId: `PN-PAT-${Math.floor(10000 + Math.random() * 90000)}`,
+      name: patientData.name || 'Registered Patient',
+      email: patientData.email,
+      phone: patientData.phone || '+94 77 000 0000',
+      district: patientData.district || 'Colombo',
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+    };
+
+    setPatients((prev) => [newPatient, ...prev]);
+    return newPatient;
+  };
+
   // Initial load from NestJS backend API routes
   useEffect(() => {
     const fetchBackendData = async () => {
@@ -201,12 +240,13 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
           reviews,
           complaints,
           platformSettings,
+          patients,
         })
       );
     } catch (e) {
       console.error('Failed to save state:', e);
     }
-  }, [psychiatrists, bookings, reviews, complaints, platformSettings]);
+  }, [psychiatrists, bookings, reviews, complaints, platformSettings, patients]);
 
   // Handle role selection
   const setUserRole = (role: UserRole) => {
@@ -459,6 +499,13 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setBookings((prev) => [newBooking, ...prev]);
 
+    // Ensure patient is in registered patients list
+    registerPatient({
+      name: data.patientName || user.name,
+      email: data.patientEmail || user.email,
+      phone: data.patientContact,
+    });
+
     return { success: true, booking: newBooking };
   };
 
@@ -632,6 +679,8 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
         reviews,
         complaints,
         platformSettings,
+        patients,
+        registerPatient,
         boostPsychiatrist,
         unboostPsychiatrist,
         updateDoctorStatus,

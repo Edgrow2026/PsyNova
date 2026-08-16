@@ -6,6 +6,7 @@ import { AuthService } from './auth/auth.service';
 import { SettingsService } from './settings/settings.service';
 import { SmsWayService } from './sms/smsway.service';
 import { PayHereService } from './payments/payhere.service';
+import { DatabaseService } from './database/database.service';
 
 const psychiatristsService = new PsychiatristsService();
 const bookingsService = new BookingsService(psychiatristsService);
@@ -15,6 +16,7 @@ const authService = new AuthService();
 const settingsService = new SettingsService();
 const smsWayService = new SmsWayService();
 const payHereService = new PayHereService();
+const databaseService = new DatabaseService();
 
 export async function getNestServices() {
   return {
@@ -26,5 +28,7 @@ export async function getNestServices() {
     settingsService,
     smsWayService,
     payHereService,
+    databaseService,
   };
 }
+

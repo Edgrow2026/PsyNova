@@ -11,6 +11,17 @@ export interface User {
   deactivatedAt?: string | null;
 }
 
+export interface PatientAccount {
+  id: string;
+  clientId: string;
+  name: string;
+  email: string;
+  phone: string;
+  district: string;
+  status: 'Active' | 'Deactivated';
+  createdAt: string;
+}
+
 export type DoctorStatus = 'approved' | 'pending' | 'suspended';
 export type BoostTier = 'none' | '1-day' | '3-day';
 
