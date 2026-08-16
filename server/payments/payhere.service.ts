@@ -1,8 +1,9 @@
 import * as crypto from 'crypto';
 
 export class PayHereService {
-  private merchantId: string = process.env.PAYHERE_MERCHANT_ID || '1224892';
-  private merchantSecret: string = process.env.PAYHERE_MERCHANT_SECRET || 'MjY0OTE2MjMyMjE2NzkwMjc2NDAxMjkxOTEwOTIzMTk5NzM4MzQ=';
+  private merchantId: string = process.env.PAYHERE_MERCHANT_ID || '1236791';
+  private merchantSecret: string =
+    process.env.PAYHERE_MERCHANT_SECRET || 'MzQ1OTQ0NjQ4MDM4ODkwOTg3NDUzNDc3MDk1ODM3Mzg4MDAzOTU3Mg==';
   private mode: string = process.env.PAYHERE_MODE || 'sandbox';
 
   getPayHereConfig() {
@@ -84,13 +85,18 @@ export class PayHereService {
     city?: string;
     baseUrl?: string;
   }) {
-    let baseUrl = data.baseUrl || process.env.APP_URL || '';
-    if (baseUrl.endsWith('/')) {
-      baseUrl = baseUrl.slice(0, -1);
+    let rawBaseUrl = data.baseUrl || process.env.APP_URL || '';
+    if (rawBaseUrl.endsWith('/')) {
+      rawBaseUrl = rawBaseUrl.slice(0, -1);
     }
-    if (!baseUrl || baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
-      baseUrl = 'https://ais-dev-djohb3zj3f3fmptsxyyogo-767996684142.asia-southeast1.run.app';
-    }
+
+    const browserBaseUrl = rawBaseUrl || 'http://localhost:3000';
+    const notifyBaseUrl =
+      rawBaseUrl && !rawBaseUrl.includes('localhost') && !rawBaseUrl.includes('127.0.0.1')
+        ? rawBaseUrl
+        : process.env.APP_URL && !process.env.APP_URL.includes('localhost')
+        ? process.env.APP_URL
+        : 'https://ais-dev-djohb3zj3f3fmptsxyyogo-767996684142.asia-southeast1.run.app';
 
     const hash = this.generateHash(data.orderId, data.amount, 'LKR');
     const checkoutUrl =
@@ -102,9 +108,9 @@ export class PayHereService {
       checkout_url: checkoutUrl,
       sandbox: this.mode === 'sandbox',
       merchant_id: this.merchantId,
-      return_url: `${baseUrl}/checkout/return?order_id=${data.orderId}`,
-      cancel_url: `${baseUrl}/checkout/cancel?order_id=${data.orderId}`,
-      notify_url: `${baseUrl}/api/payments/payhere/notify`,
+      return_url: `${browserBaseUrl}/checkout/return?order_id=${data.orderId}`,
+      cancel_url: `${browserBaseUrl}/checkout/cancel?order_id=${data.orderId}`,
+      notify_url: `${notifyBaseUrl}/api/payments/payhere/notify`,
       order_id: data.orderId,
       items: data.items,
       amount: data.amount.toFixed(2),
