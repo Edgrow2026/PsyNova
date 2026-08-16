@@ -1,0 +1,6 @@
+{
+  "name": "PsyNova",
+  "description": "Online Psychiatrist Consultation Platform in Sri Lanka with SLMC verified specialists.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
