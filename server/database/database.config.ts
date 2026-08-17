@@ -32,7 +32,7 @@ export function getDatabaseOptions(env: Record<string, string | undefined> = pro
         port: 5432,
         username: 'postgres',
         password: '',
-        database: 'psynova_db',
+        database: 'psynova',
         synchronize: false,
       };
     }
