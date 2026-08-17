@@ -77,14 +77,22 @@ interface PsyNovaContextType {
 
 const PsyNovaContext = createContext<PsyNovaContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'psynova_state_v1';
+const LOCAL_STORAGE_KEY = 'psynova_state_v2';
 
 export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>({
-    id: 'usr-guest',
-    email: 'visitor@psynova.lk',
-    name: 'Guest Visitor',
-    role: 'guest',
+  const [user, setUser] = useState<User>(() => {
+    if (typeof window === 'undefined')
+      return { id: 'usr-guest', email: 'visitor@psynova.lk', name: 'Guest Visitor', role: 'guest' };
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.user) return parsed.user;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return { id: 'usr-guest', email: 'visitor@psynova.lk', name: 'Guest Visitor', role: 'guest' };
   });
 
   const [showRoleSelector, setShowRoleSelector] = useState<boolean>(false);
@@ -355,6 +363,7 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.setItem(
         LOCAL_STORAGE_KEY,
         JSON.stringify({
+          user,
           psychiatrists,
           bookings,
           reviews,
@@ -366,7 +375,7 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (e) {
       console.error('Failed to save state:', e);
     }
-  }, [psychiatrists, bookings, reviews, complaints, platformSettings, patients]);
+  }, [user, psychiatrists, bookings, reviews, complaints, platformSettings, patients]);
 
   // Handle role selection
   const setUserRole = (role: UserRole) => {

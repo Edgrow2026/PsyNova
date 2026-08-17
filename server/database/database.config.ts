@@ -51,7 +51,7 @@ export function getDatabaseOptions(env: Record<string, string | undefined> = pro
   }
 
   const isSSL = sslStr?.toLowerCase() === 'true' || sslStr === '1';
-  const synchronize = synchronizeStr?.toLowerCase() === 'true' || synchronizeStr === '1';
+  const synchronize = synchronizeStr !== undefined ? (synchronizeStr.toLowerCase() === 'true' || synchronizeStr === '1') : true;
 
   return {
     type: 'postgres',
