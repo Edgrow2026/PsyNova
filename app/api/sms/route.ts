@@ -20,9 +20,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     if (body.action === 'test') {
+      const recipient = body.recipient || '94770000000';
       const res = await smsWayService.sendSms(
-        body.recipient || '+94771234567',
-        'PsyNova LK Test: SMSWay.lk gateway connection verified. Telehealth SMS notifications active.'
+        recipient,
+        `PsyNova LK Test: SMSWay.lk gateway connection verified for ${recipient}. Telehealth SMS notifications active.`
       );
       return NextResponse.json(res);
     } else if (body.action === 'reminder-5min') {
@@ -38,6 +39,11 @@ export async function POST(req: NextRequest) {
     } else if (body.action === 'booking-confirmation') {
       if (body.booking) {
         const res = await smsWayService.sendBookingConfirmation(body.booking);
+        return NextResponse.json(res);
+      }
+    } else if (body.action === 'doctor-alert') {
+      if (body.booking) {
+        const res = await smsWayService.sendDoctorAlert(body.booking);
         return NextResponse.json(res);
       }
     }

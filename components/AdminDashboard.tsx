@@ -60,6 +60,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
   const [selectedPatientFilter, setSelectedPatientFilter] = useState<string>('');
   const [patientSearchQuery, setPatientSearchQuery] = useState<string>('');
   const [bookingSearchQuery, setBookingSearchQuery] = useState<string>('');
+  const [testSmsRecipient, setTestSmsRecipient] = useState<string>('');
 
   // Boost action message
   const [boostMsg, setBoostMsg] = useState<string | null>(null);
@@ -1014,27 +1015,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
                   <span className="font-mono text-[#6B7D5E]">Sender: PsyNovaLK</span>
                 </div>
                 <p className="text-[#2D3728]/70">
-                  Automated appointment dispatch & Jitsi video consultation reminders to <strong className="font-mono">+94</strong> Sri Lanka mobile numbers.
+                  Automated appointment dispatch & Jitsi video consultation reminders sent to customer booking phone numbers (<strong className="font-mono">+94</strong>).
                 </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch('/api/sms', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ action: 'test', recipient: '+94771234567' }),
-                        });
-                        const data = await res.json();
-                        alert(`SMSway.lk Test Result:\nStatus: ${data.status}\nMessage ID: ${data.messageId || data.log?.id}\nPhone: ${data.log?.formattedRecipient || '+94 77 123 4567'}`);
-                      } catch (e: any) {
-                        alert('SMSway test error: ' + e.message);
-                      }
-                    }}
-                    className="btn-secondary text-[11px] py-1.5 px-3"
-                  >
-                    Run SMSway.lk Connection Test
-                  </button>
+                <div className="space-y-2 pt-2 border-t border-[#768c6e]/15">
+                  <label className="text-[11px] font-semibold text-[#2D3728]/80 block">
+                    Target Customer Phone Number (From Booking or Custom)
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="tel"
+                      value={testSmsRecipient || (bookings[0]?.patientContact || '+94 77 123 4567')}
+                      onChange={(e) => setTestSmsRecipient(e.target.value)}
+                      placeholder="e.g. +94771234567"
+                      className="flex-1 px-3 py-1.5 rounded-xl border border-[#768c6e]/30 bg-white text-xs font-mono text-[#2D3728]"
+                    />
+                    {bookings.length > 0 && (
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) setTestSmsRecipient(e.target.value);
+                        }}
+                        className="px-2 py-1.5 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728]"
+                      >
+                        <option value="">Select Booked Customer...</option>
+                        {bookings.map((bk) => (
+                          <option key={bk.id} value={bk.patientContact}>
+                            {bk.patientName} ({bk.patientContact}) - {bk.id}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <button
+                      onClick={async () => {
+                        const target = testSmsRecipient || (bookings[0]?.patientContact || '+94771234567');
+                        try {
+                          const res = await fetch('/api/sms', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'test', recipient: target }),
+                          });
+                          const data = await res.json();
+                          alert(`SMSway.lk Test Result:\nStatus: ${data.status}\nMessage ID: ${data.messageId || data.log?.id}\nTarget Phone: ${data.log?.formattedRecipient || target}`);
+                        } catch (e: any) {
+                          alert('SMSway test error: ' + e.message);
+                        }
+                      }}
+                      className="btn-secondary text-[11px] py-1.5 px-3 shrink-0"
+                    >
+                      Run SMSway.lk Test
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

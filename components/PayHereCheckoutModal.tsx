@@ -33,7 +33,7 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { user } = usePsyNova();
+  const { user, patients } = usePsyNova();
 
   const activePatientName =
     user.role === 'patient' && user.name && user.name !== 'Guest Visitor' ? user.name : 'Dilshan Silva';
@@ -42,10 +42,13 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
       ? user.email
       : 'dilshan.silva@example.lk';
 
+  const registeredPatient = patients.find((p) => p.email.toLowerCase() === activePatientEmail.toLowerCase());
+  const defaultContact = registeredPatient?.phone || '+94 77 987 6543';
+
   // Patient Info State
   const [patientName, setPatientName] = useState(activePatientName);
   const [patientEmail, setPatientEmail] = useState(activePatientEmail);
-  const [patientContact, setPatientContact] = useState('+94 77 123 4567');
+  const [patientContact, setPatientContact] = useState(defaultContact);
 
   // Checkout Mode (defaults to sandbox_terminal for working out-of-the-box flow)
   const [checkoutMode, setCheckoutMode] = useState<'sandbox_terminal' | 'hosted_redirect'>('sandbox_terminal');

@@ -45,7 +45,7 @@ export const DoctorPortal: React.FC = () => {
   const [activeJitsiBooking, setActiveJitsiBooking] = useState<Booking | null>(null);
 
   // SMSway testing
-  const [testSmsPhone, setTestSmsPhone] = useState('+94771234567');
+  const [testSmsPhone, setTestSmsPhone] = useState('');
   const [testSmsMsg, setTestSmsMsg] = useState('PsyNova LK: Your doctor is ready for the tele-consultation.');
   const [smsSending, setSmsSending] = useState(false);
   const [smsResult, setSmsResult] = useState<string | null>(null);
@@ -544,11 +544,29 @@ export const DoctorPortal: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="text-xs font-semibold text-[#2D3728]/80 block mb-1">Patient Phone (+94 SL)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-[#2D3728]/80 block">Patient Phone (+94 SL)</label>
+              {doctorBookings.length > 0 && (
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) setTestSmsPhone(e.target.value);
+                  }}
+                  className="text-[10px] bg-white border border-[#768c6e]/30 rounded px-1.5 py-0.5 text-[#2D3728]"
+                >
+                  <option value="">Select booking...</option>
+                  {doctorBookings.map((bk) => (
+                    <option key={bk.id} value={bk.patientContact}>
+                      {bk.patientName} ({bk.patientContact})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
             <input
               type="tel"
-              value={testSmsPhone}
+              value={testSmsPhone || (doctorBookings[0]?.patientContact || '')}
               onChange={(e) => setTestSmsPhone(e.target.value)}
+              placeholder="e.g. +94771234567"
               className="w-full px-3 py-2 rounded-xl border border-[#768c6e]/30 bg-white text-xs font-mono text-[#2D3728]"
             />
           </div>
@@ -563,16 +581,17 @@ export const DoctorPortal: React.FC = () => {
               />
               <button
                 onClick={async () => {
+                  const recipient = testSmsPhone || (doctorBookings[0]?.patientContact || '+94771234567');
                   setSmsSending(true);
                   setSmsResult(null);
                   try {
                     const res = await fetch('/api/sms', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ recipient: testSmsPhone, message: testSmsMsg }),
+                      body: JSON.stringify({ recipient, message: testSmsMsg }),
                     });
                     const data = await res.json();
-                    setSmsResult(`SMSway Dispatched! Status: ${data.status || 'Success'} (ID: ${data.messageId || 'SMSWAY-102'})`);
+                    setSmsResult(`SMSway Dispatched to ${recipient}! Status: ${data.status || 'Success'} (ID: ${data.messageId || 'SMSWAY-102'})`);
                   } catch (e: any) {
                     setSmsResult('SMSway dispatch error: ' + e.message);
                   } finally {

@@ -699,6 +699,19 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
       phone: data.patientContact,
     });
 
+    // Trigger automatic SMS confirmation after successful payment to the customer's phone number
+    fetch('/api/sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'booking-confirmation', booking: newBooking }),
+    }).catch((err) => console.error('Auto SMS booking confirmation error:', err));
+
+    fetch('/api/sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'doctor-alert', booking: newBooking }),
+    }).catch((err) => console.error('Auto SMS doctor alert error:', err));
+
     return { success: true, booking: newBooking };
   };
 

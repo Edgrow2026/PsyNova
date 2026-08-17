@@ -14,12 +14,15 @@ interface BookingModalProps {
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({ doctor, slot, isOpen, onClose, onSuccess }) => {
-  const { createBooking, user } = usePsyNova();
+  const { createBooking, user, patients } = usePsyNova();
+
+  const registeredPatient = patients.find((p) => p.email.toLowerCase() === (user.email || '').toLowerCase());
+  const defaultContact = registeredPatient?.phone || '+94 77 987 6543';
 
   const [step, setStep] = useState<'details' | 'payhere' | 'success'>('details');
   const [patientName, setPatientName] = useState(user.name || '');
   const [patientEmail, setPatientEmail] = useState(user.email || '');
-  const [patientContact, setPatientContact] = useState('+94 77 123 4567');
+  const [patientContact, setPatientContact] = useState(defaultContact);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
