@@ -107,14 +107,37 @@ export class SmsWayService {
   }
 
   async sendBookingConfirmation(booking: Booking): Promise<any> {
-    const msg = `PsyNova LK: Booking ${booking.id} confirmed with ${booking.doctorName}. Fee LKR ${booking.feeLkr.toLocaleString()} paid via PayHere. Telehealth room: ${booking.videoLink}`;
+    const formattedDate = new Date(booking.slotDatetime).toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const msg = `PsyNova LK: Booking ${booking.id} CONFIRMED! Specialist: ${booking.doctorName}. Date & Time: ${formattedDate}. Fee LKR ${booking.feeLkr.toLocaleString()} paid via PayHere. Join Video Session: ${booking.videoLink}`;
     return this.sendSms(booking.patientContact, msg);
   }
 
   async sendDoctorAlert(booking: Booking, doctorPhone?: string): Promise<any> {
     const phone = doctorPhone || '+94773849100';
-    const msg = `PsyNova Alert: New consultation booked by ${booking.patientName} for ${new Date(booking.slotDatetime).toLocaleString('en-US')}. Ref: ${booking.id}`;
+    const formattedDate = new Date(booking.slotDatetime).toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const msg = `PsyNova Alert: New consultation booked by ${booking.patientName} for ${formattedDate}. Ref: ${booking.id}. Telehealth link: ${booking.videoLink}`;
     return this.sendSms(phone, msg);
+  }
+
+  async send5MinReminder(booking: Booking): Promise<any> {
+    const formattedTime = new Date(booking.slotDatetime).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const msg = `PsyNova REMINDER: Your Telehealth Consultation with ${booking.doctorName} starts in 5 minutes (${formattedTime}). Click to join video room: ${booking.videoLink}`;
+    return this.sendSms(booking.patientContact, msg);
   }
 
   async sendJitsiReminder(booking: Booking, targetPhone: string, role: 'patient' | 'psychiatrist'): Promise<any> {

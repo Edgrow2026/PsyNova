@@ -14,13 +14,14 @@ interface DoctorModalProps {
 
 export const DoctorModal: React.FC<DoctorModalProps> = ({ doctor, isOpen, onClose, onProceedToBook }) => {
   const { reviews, voteHelpfulReview } = usePsyNova();
-  // Auto-select first available slot when doctor changes
-  const availableSlot = doctor?.upcomingSlots.find((s) => s.status === 'available') || null;
+  // Only future slots are eligible for selection
+  const futureSlots = (doctor?.upcomingSlots || []).filter((s) => new Date(s.datetime) > new Date());
+  const availableSlot = futureSlots.find((s) => s.status === 'available') || null;
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
   // Derive active selected slot
   const selectedSlot =
-    doctor?.upcomingSlots.find((s) => s.id === selectedSlotId && s.status === 'available') ||
+    futureSlots.find((s) => s.id === selectedSlotId && s.status === 'available') ||
     availableSlot;
 
   // Press Escape to close modal
@@ -118,13 +119,13 @@ export const DoctorModal: React.FC<DoctorModalProps> = ({ doctor, isOpen, onClos
               <span className="text-xs text-[#2D3728]/70">Next 7 Days</span>
             </div>
 
-            {doctor.upcomingSlots.length === 0 ? (
+            {futureSlots.length === 0 ? (
               <p className="text-xs text-[#2D3728]/70 italic p-4 rounded-xl bg-white/40 border border-[#768c6e]/15">
-                No open slots currently listed. Please check back soon or message support.
+                No open future slots currently listed. Past slots are not allowed. Please check back soon or contact support.
               </p>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {doctor.upcomingSlots.map((s) => {
+                {futureSlots.map((s) => {
                   const dateObj = new Date(s.datetime);
                   const isSelected = selectedSlot?.id === s.id;
                   const isBooked = s.status === 'booked';

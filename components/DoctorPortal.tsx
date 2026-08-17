@@ -52,6 +52,42 @@ export const DoctorPortal: React.FC = () => {
   // Boost promotion alert
   const [boostAlert, setBoostAlert] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Slot Creation State
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [slotDate, setSlotDate] = useState('');
+  const [slotTime, setSlotTime] = useState('09:00');
+  const [slotDuration, setSlotDuration] = useState(45);
+  const [slotError, setSlotError] = useState<string | null>(null);
+  const [slotSuccess, setSlotSuccess] = useState<string | null>(null);
+
+  const handleAddSlot = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSlotError(null);
+    setSlotSuccess(null);
+
+    if (!slotDate) {
+      setSlotError('Please select a valid consultation date.');
+      return;
+    }
+
+    const selectedDateTime = new Date(`${slotDate}T${slotTime}:00`);
+    if (selectedDateTime <= new Date()) {
+      setSlotError('Past dates and times are strictly prohibited! Please select a future date and time for booking availability.');
+      return;
+    }
+
+    const newSlot = {
+      id: `slot-${Date.now()}`,
+      datetime: selectedDateTime.toISOString(),
+      durationMins: slotDuration,
+      status: 'available' as const,
+    };
+
+    currentDoc.upcomingSlots = [newSlot, ...currentDoc.upcomingSlots];
+    setSlotSuccess(`Future slot added successfully for ${selectedDateTime.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}`);
+    setSlotDate('');
+  };
+
   // Consultations related to this doctor
   const doctorBookings = bookings.filter((b) => b.doctorId === currentDoc.id);
 
@@ -233,6 +269,115 @@ export const DoctorPortal: React.FC = () => {
         )}
       </div>
 
+      {/* Future Consultation Availability Slots Manager */}
+      <div className="p-6 sm:p-8 rounded-[28px] bg-[#F7F5EF] border border-[#768c6e]/20 shadow-md space-y-6">
+        <div className="border-b border-[#768c6e]/15 pb-4">
+          <h2 className="text-xl font-bold text-[#2D3728] flex items-center gap-2">
+            <Clock className="w-5 h-5 text-[#768c6e]" /> Manage Future Availability Slots
+          </h2>
+          <p className="text-xs text-[#2D3728]/70 mt-0.5">
+            Add future consultation slots for patient bookings. Past dates and times are strictly disallowed.
+          </p>
+        </div>
+
+        {/* Slot Creation Form */}
+        <form onSubmit={handleAddSlot} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+          <div>
+            <label className="text-xs font-semibold text-[#2D3728]/80 block mb-1">Select Future Date</label>
+            <input
+              type="date"
+              required
+              min={todayStr}
+              value={slotDate}
+              onChange={(e) => setSlotDate(e.target.value)}
+              className="w-full px-3.5 py-2 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728] focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-[#2D3728]/80 block mb-1">Start Time</label>
+            <input
+              type="time"
+              required
+              value={slotTime}
+              onChange={(e) => setSlotTime(e.target.value)}
+              className="w-full px-3.5 py-2 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728] focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-[#2D3728]/80 block mb-1">Duration (Mins)</label>
+            <select
+              value={slotDuration}
+              onChange={(e) => setSlotDuration(Number(e.target.value))}
+              className="w-full px-3.5 py-2 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728] focus:outline-none"
+            >
+              <option value={30}>30 Minutes</option>
+              <option value={45}>45 Minutes</option>
+              <option value={60}>60 Minutes</option>
+            </select>
+          </div>
+          <div>
+            <button type="submit" className="btn-primary w-full text-xs py-2.5 flex items-center justify-center gap-1.5">
+              <Plus className="w-4 h-4" /> Add Future Slot
+            </button>
+          </div>
+        </form>
+
+        {slotError && (
+          <div className="p-3 rounded-xl bg-red-100 text-red-900 border border-red-300 text-xs font-semibold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{slotError}</span>
+          </div>
+        )}
+
+        {slotSuccess && (
+          <div className="p-3 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-semibold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <span>{slotSuccess}</span>
+          </div>
+        )}
+
+        {/* Existing Upcoming Slots List */}
+        <div>
+          <h3 className="text-xs font-semibold text-[#6B7D5E] uppercase tracking-wider mb-2">Active Future Slots</h3>
+          {currentDoc.upcomingSlots.length === 0 ? (
+            <p className="text-xs text-[#2D3728]/70 italic p-4 rounded-xl bg-white/50 border border-[#768c6e]/15">
+              No future slots listed. Please use the form above to add future consultation hours.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+              {currentDoc.upcomingSlots.map((s) => {
+                const dateObj = new Date(s.datetime);
+                const isPast = dateObj <= new Date();
+                return (
+                  <div
+                    key={s.id}
+                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between ${
+                      isPast
+                        ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60'
+                        : s.status === 'booked'
+                        ? 'bg-amber-50/80 border-amber-200 text-amber-900'
+                        : 'bg-white/80 border-[#768c6e]/20 text-[#2D3728]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold">
+                        {dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </span>
+                      <span className="text-[10px] font-mono uppercase font-bold">
+                        {isPast ? 'Past (Invalid)' : s.status}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono mt-1 font-medium">
+                      {dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} ({s.durationMins}m)
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* SLMC Qualification Document Storage */}
       <div className="p-6 sm:p-8 rounded-[28px] bg-[#F7F5EF] border border-[#768c6e]/20 shadow-md space-y-6">
         <div className="border-b border-[#768c6e]/15 pb-4">
@@ -344,12 +489,31 @@ export const DoctorPortal: React.FC = () => {
                       </td>
                       <td className="p-4 text-right">
                         {bk.status === 'confirmed' && (
-                          <button
-                            onClick={() => setActiveJitsiBooking(bk)}
-                            className="btn-primary text-[11px] py-1.5 px-3 inline-flex items-center gap-1 shadow-sm"
-                          >
-                            <Video className="w-3.5 h-3.5" /> Start Jitsi Telehealth Call
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await fetch('/api/sms', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ action: 'reminder-5min', booking: bk }),
+                                  });
+                                  alert(`5-Minute Pre-Session Reminder SMS dispatched to ${bk.patientName} (${bk.patientContact})!`);
+                                } catch (err: any) {
+                                  alert('Failed to send reminder SMS: ' + err.message);
+                                }
+                              }}
+                              className="btn-secondary text-[11px] py-1.5 px-3 inline-flex items-center gap-1 border-[#768c6e] text-[#6B7D5E]"
+                            >
+                              <Clock className="w-3.5 h-3.5" /> Send 5-Min Reminder SMS
+                            </button>
+                            <button
+                              onClick={() => setActiveJitsiBooking(bk)}
+                              className="btn-primary text-[11px] py-1.5 px-3 inline-flex items-center gap-1 shadow-sm"
+                            >
+                              <Video className="w-3.5 h-3.5" /> Start Jitsi Call
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

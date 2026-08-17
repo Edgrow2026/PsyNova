@@ -5,6 +5,13 @@ export const initialPlatformSettings: PlatformSettings = {
   maxBoostedDoctors: 9,
 };
 
+const getFutureSlotISO = (daysAhead: number, hour: number, minute: number = 0) => {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString();
+};
+
 export const initialPsychiatrists: Psychiatrist[] = [
   {
     id: 'doc-1',
@@ -14,7 +21,7 @@ export const initialPsychiatrists: Psychiatrist[] = [
     status: 'approved',
     isBoosted: true,
     boostTier: '3-day',
-    boostExpiry: '2026-08-16T23:59:59Z',
+    boostExpiry: getFutureSlotISO(3, 23, 59),
     photo: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=600&auto=format&fit=crop',
     bio: 'Over 16 years of clinical experience in mood disorders, anxiety, and adult cognitive behavioral therapy across Sri Lanka teaching hospitals.',
     languages: ['English', 'Sinhala'],
@@ -26,10 +33,10 @@ export const initialPsychiatrists: Psychiatrist[] = [
     reviewCount: 42,
     ratingDistribution: { 5: 38, 4: 3, 3: 1, 2: 0, 1: 0 },
     upcomingSlots: [
-      { id: 's101', datetime: '2026-08-14T09:00:00Z', durationMins: 45, status: 'available' },
-      { id: 's102', datetime: '2026-08-14T10:30:00Z', durationMins: 45, status: 'available' },
-      { id: 's103', datetime: '2026-08-15T14:00:00Z', durationMins: 45, status: 'available' },
-      { id: 's104', datetime: '2026-08-16T11:00:00Z', durationMins: 45, status: 'available' },
+      { id: 's101', datetime: getFutureSlotISO(1, 9, 0), durationMins: 45, status: 'available' },
+      { id: 's102', datetime: getFutureSlotISO(1, 10, 30), durationMins: 45, status: 'available' },
+      { id: 's103', datetime: getFutureSlotISO(2, 14, 0), durationMins: 45, status: 'available' },
+      { id: 's104', datetime: getFutureSlotISO(3, 11, 0), durationMins: 45, status: 'available' },
     ],
     documents: [
       { id: 'd1', name: 'SLMC_Board_Certificate_2010.pdf', url: '#', uploadDate: '2024-01-15', status: 'Approved' },
@@ -44,7 +51,7 @@ export const initialPsychiatrists: Psychiatrist[] = [
     status: 'approved',
     isBoosted: true,
     boostTier: '1-day',
-    boostExpiry: '2026-08-13T23:59:59Z',
+    boostExpiry: getFutureSlotISO(1, 23, 59),
     photo: 'https://images.unsplash.com/photo-1594824813566-78a1ed6a2b4b?q=80&w=600&auto=format&fit=crop',
     bio: 'Dedicated to young minds and neurodevelopmental care. Specialist in ADHD, teen anxiety, and family relational dynamics.',
     languages: ['English', 'Sinhala'],
@@ -56,9 +63,9 @@ export const initialPsychiatrists: Psychiatrist[] = [
     reviewCount: 31,
     ratingDistribution: { 5: 27, 4: 3, 3: 1, 2: 0, 1: 0 },
     upcomingSlots: [
-      { id: 's201', datetime: '2026-08-13T16:00:00Z', durationMins: 45, status: 'available' },
-      { id: 's202', datetime: '2026-08-14T15:00:00Z', durationMins: 45, status: 'available' },
-      { id: 's203', datetime: '2026-08-16T10:00:00Z', durationMins: 45, status: 'available' },
+      { id: 's201', datetime: getFutureSlotISO(1, 16, 0), durationMins: 45, status: 'available' },
+      { id: 's202', datetime: getFutureSlotISO(2, 15, 0), durationMins: 45, status: 'available' },
+      { id: 's203', datetime: getFutureSlotISO(4, 10, 0), durationMins: 45, status: 'available' },
     ],
     documents: [
       { id: 'd3', name: 'SLMC_Reg_Doc_ChildPsych.pdf', url: '#', uploadDate: '2024-03-10', status: 'Approved' },
@@ -72,7 +79,7 @@ export const initialPsychiatrists: Psychiatrist[] = [
     status: 'approved',
     isBoosted: true,
     boostTier: '3-day',
-    boostExpiry: '2026-08-16T23:59:59Z',
+    boostExpiry: getFutureSlotISO(3, 23, 59),
     photo: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?q=80&w=600&auto=format&fit=crop',
     bio: 'Pioneer in trauma-informed care and geriatric psychiatry. Fluent in Tamil, Sinhala, and English with compassionate tele-consultations.',
     languages: ['English', 'Tamil', 'Sinhala'],
@@ -84,8 +91,8 @@ export const initialPsychiatrists: Psychiatrist[] = [
     reviewCount: 28,
     ratingDistribution: { 5: 28, 4: 0, 3: 0, 2: 0, 1: 0 },
     upcomingSlots: [
-      { id: 's301', datetime: '2026-08-14T11:00:00Z', durationMins: 45, status: 'available' },
-      { id: 's302', datetime: '2026-08-15T17:00:00Z', durationMins: 45, status: 'available' },
+      { id: 's301', datetime: getFutureSlotISO(1, 11, 0), durationMins: 45, status: 'available' },
+      { id: 's302', datetime: getFutureSlotISO(2, 17, 0), durationMins: 45, status: 'available' },
     ],
     documents: [
       { id: 'd4', name: 'Jaffna_General_SLMC.pdf', url: '#', uploadDate: '2023-11-20', status: 'Approved' },
@@ -111,8 +118,8 @@ export const initialPsychiatrists: Psychiatrist[] = [
     reviewCount: 19,
     ratingDistribution: { 5: 15, 4: 3, 3: 1, 2: 0, 1: 0 },
     upcomingSlots: [
-      { id: 's401', datetime: '2026-08-14T18:00:00Z', durationMins: 45, status: 'available' },
-      { id: 's402', datetime: '2026-08-16T15:30:00Z', durationMins: 45, status: 'available' },
+      { id: 's401', datetime: getFutureSlotISO(1, 18, 0), durationMins: 45, status: 'available' },
+      { id: 's402', datetime: getFutureSlotISO(3, 15, 30), durationMins: 45, status: 'available' },
     ],
     documents: [
       { id: 'd5', name: 'SLMC_Cert_Galle.pdf', url: '#', uploadDate: '2024-05-02', status: 'Approved' },
@@ -138,8 +145,8 @@ export const initialPsychiatrists: Psychiatrist[] = [
     reviewCount: 24,
     ratingDistribution: { 5: 22, 4: 2, 3: 0, 2: 0, 1: 0 },
     upcomingSlots: [
-      { id: 's501', datetime: '2026-08-13T18:00:00Z', durationMins: 45, status: 'available' },
-      { id: 's502', datetime: '2026-08-15T09:30:00Z', durationMins: 45, status: 'available' },
+      { id: 's501', datetime: getFutureSlotISO(1, 18, 0), durationMins: 45, status: 'available' },
+      { id: 's502', datetime: getFutureSlotISO(2, 9, 30), durationMins: 45, status: 'available' },
     ],
     documents: [
       { id: 'd6', name: 'SLMC_Perinatal_Creds.pdf', url: '#', uploadDate: '2024-04-18', status: 'Approved' },

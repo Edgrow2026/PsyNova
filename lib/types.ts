@@ -90,6 +90,7 @@ export interface Booking {
   paymentStatus: PaymentStatus;
   payhereRef: string;
   videoLink?: string;
+  reminder5MinSent?: boolean;
   createdAt: string;
   statusHistory: {
     status: BookingStatus;

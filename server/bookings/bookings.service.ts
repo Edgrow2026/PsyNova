@@ -27,6 +27,10 @@ export class BookingsService {
     patientContact: string;
     patientId?: string;
   }): { success: boolean; booking: Booking } {
+    if (new Date(data.slotDatetime) <= new Date()) {
+      throw new Error('Past dates are not allowed for booking. Please select a future date and time.');
+    }
+
     const doctor = this.psychiatristsService.findOne(data.doctorId);
     const slot = doctor.upcomingSlots.find((s) => s.id === data.slotId);
 
@@ -195,6 +199,10 @@ export class BookingsService {
     patientContact: string;
     patientId?: string;
   }): { success: boolean; booking: Booking } {
+    if (new Date(data.slotDatetime) <= new Date()) {
+      throw new Error('Past dates are not allowed for booking. Please select a future date and time.');
+    }
+
     const doctor = this.psychiatristsService.findOne(data.doctorId);
     const slot = doctor.upcomingSlots.find((s) => s.id === data.slotId);
 

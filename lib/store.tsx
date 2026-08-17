@@ -377,6 +377,41 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [user, psychiatrists, bookings, reviews, complaints, platformSettings, patients]);
 
+  // Automated 5-minute pre-session SMS reminder scanner
+  useEffect(() => {
+    const scanAndDispatchReminders = async () => {
+      const now = Date.now();
+      const fiveMinsMs = 5 * 60 * 1000;
+
+      for (const booking of bookings) {
+        if (booking.status === 'confirmed' && !booking.reminder5MinSent) {
+          const slotTime = new Date(booking.slotDatetime).getTime();
+          const diff = slotTime - now;
+
+          // If session starts in <= 5 mins (and hasn't passed more than 15 mins)
+          if (diff > -15 * 60 * 1000 && diff <= fiveMinsMs) {
+            try {
+              await fetch('/api/sms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reminder-5min', booking }),
+              });
+              setBookings((prev) =>
+                prev.map((b) => (b.id === booking.id ? { ...b, reminder5MinSent: true } : b))
+              );
+            } catch (e) {
+              console.error('Automated 5-min SMS reminder error:', e);
+            }
+          }
+        }
+      }
+    };
+
+    const interval = setInterval(scanAndDispatchReminders, 15000);
+    scanAndDispatchReminders();
+    return () => clearInterval(interval);
+  }, [bookings]);
+
   // Handle role selection
   const setUserRole = (role: UserRole) => {
     let newUser: User = {

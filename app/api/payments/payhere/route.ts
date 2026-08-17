@@ -96,6 +96,20 @@ export async function POST(req: NextRequest) {
     }
 
     const isValid = payHereService.verifyNotificationHash(body);
+    if (isValid && body.order_id) {
+      const statusCode = body.status_code;
+      const result = bookingsService.verifyAndConfirmPayHerePayment(
+        body.order_id,
+        body.payment_id || `PAYHERE-${Date.now()}`,
+        statusCode,
+        `PayHere Gateway IPN Callback (status_code ${statusCode})`
+      );
+      if (result.success && result.isNewlyConfirmed) {
+        await smsWayService.sendBookingConfirmation(result.booking);
+        await smsWayService.sendDoctorAlert(result.booking);
+      }
+      return NextResponse.json({ status: 'PROCESSED', verified: true, booking: result.booking });
+    }
     return NextResponse.json({ verified: isValid });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'PayHere request failed' }, { status: 400 });
