@@ -110,64 +110,48 @@ export class DatabaseService {
       }
     }
 
-    // 3. Seed Patients
+    // 3. Patients and Bookings are created dynamically upon patient registration/booking and saved to PostgreSQL.
+  }
+
+  /**
+   * Patient Database Operations
+   */
+  async getAllPatients() {
+    const ds = await this.getDataSource();
     const patRepo = ds.getRepository(PatientEntity);
-    const countPatients = await patRepo.count();
-    if (countPatients === 0) {
-      for (const pat of initialPatients) {
-        await patRepo.save({
-          id: pat.id,
-          clientId: pat.clientId,
-          name: pat.name,
-          email: pat.email,
-          phone: pat.phone,
-          district: pat.district,
-          status: pat.status,
-        });
-      }
+    return patRepo.find({ order: { createdAt: 'DESC' } });
+  }
+
+  async createPatient(data: { id?: string; clientId?: string; name: string; email: string; phone?: string; district?: string; password?: string }) {
+    const ds = await this.getDataSource();
+    const patRepo = ds.getRepository(PatientEntity);
+
+    // Check if patient already exists by email
+    let patient = await patRepo.findOne({ where: { email: data.email } });
+    if (patient) {
+      // Update name/phone/district/password if provided
+      if (data.name) patient.name = data.name;
+      if (data.phone) patient.phone = data.phone;
+      if (data.district) patient.district = data.district;
+      if (data.password) patient.password = data.password;
+      return patRepo.save(patient);
     }
 
-    // 4. Seed Bookings with JSONB statusHistory & gatewayResponse
-    const bookingRepo = ds.getRepository(BookingEntity);
-    const countBookings = await bookingRepo.count();
-    if (countBookings === 0) {
-      for (const b of initialBookings) {
-        await bookingRepo.save({
-          id: b.id,
-          doctorId: b.doctorId,
-          doctorName: b.doctorName,
-          patientId: b.patientId,
-          patientName: b.patientName,
-          patientEmail: b.patientEmail,
-          patientContact: b.patientContact,
-          slotId: (b as any).slotId || 'slot-1',
-          slotDatetime: b.slotDatetime,
-          status: b.status,
-          paymentStatus: b.paymentStatus,
-          feeLkr: b.feeLkr,
-          platformCommissionLkr: b.platformCommissionLkr,
-          netDoctorEarningLkr: b.netDoctorEarningLkr,
-          payhereRef: b.payhereRef,
-          videoLink: b.videoLink,
-          statusHistory: [
-            {
-              status: b.status,
-              timestamp: b.createdAt || new Date().toISOString(),
-              updatedBy: 'system',
-            },
-          ],
-          gatewayResponse: b.payhereRef
-            ? {
-                orderId: b.id,
-                payhereAmount: b.feeLkr,
-                statusCode: 2,
-                statusMessage: 'SUCCESS',
-                method: 'VISA/MASTER',
-              }
-            : null,
-        });
-      }
-    }
+    const id = data.id || `pat-${Date.now()}`;
+    const clientId = data.clientId || `PN-PAT-${Math.floor(10000 + Math.random() * 90000)}`;
+
+    patient = patRepo.create({
+      id,
+      clientId,
+      name: data.name,
+      email: data.email,
+      phone: data.phone || '+94 77 000 0000',
+      district: data.district || 'Colombo',
+      password: data.password || undefined,
+      status: 'Active',
+    });
+
+    return patRepo.save(patient);
   }
 
   /**

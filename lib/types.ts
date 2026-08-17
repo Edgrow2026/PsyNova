@@ -18,6 +18,7 @@ export interface PatientAccount {
   email: string;
   phone: string;
   district: string;
+  password?: string;
   status: 'Active' | 'Deactivated';
   createdAt: string;
 }

@@ -5,12 +5,14 @@ export class AuthService {
     let user: User;
 
     if (role === 'patient') {
+      const email = emailOrPhone || '';
+      const nameFromEmail = email ? email.split('@')[0].replace(/[._]/g, ' ') : 'Registered Patient';
       user = {
-        id: 'pat-1',
-        email: emailOrPhone || 'dilshan.silva@example.lk',
-        name: 'Dilshan Silva',
+        id: `pat-${Date.now()}`,
+        email: email,
+        name: nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1),
         role: 'patient',
-        clientId: 'PN-PAT-88421',
+        clientId: `PN-PAT-${Math.floor(10000 + Math.random() * 90000)}`,
       };
     } else if (role === 'psychiatrist') {
       user = {

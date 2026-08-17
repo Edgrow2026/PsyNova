@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Psychiatrist, DoctorSlot } from '@/lib/types';
 import { usePsyNova } from '@/lib/store';
-import { X, UserCheck, LogIn, UserPlus, ShieldCheck, Calendar, Clock, CreditCard, Lock, ArrowRight } from 'lucide-react';
+import { X, UserCheck, LogIn, UserPlus, ShieldCheck, Calendar, Clock, CreditCard, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface GuestAuthModalProps {
   isOpen: boolean;
@@ -20,15 +20,16 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
   onClose,
   onAuthSuccess,
 }) => {
-  const { setUserRole, registerPatient } = usePsyNova();
+  const { setUserRole, registerPatient, loginUser, patients } = usePsyNova();
   const [tab, setTab] = useState<'signup' | 'signin'>('signup');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Form Fields
-  const [name, setName] = useState('Dilshan Silva');
-  const [email, setEmail] = useState('dilshan.silva@example.lk');
-  const [contact, setContact] = useState('+94 77 123 4567');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [contact, setContact] = useState('');
   const [district, setDistrict] = useState('Colombo');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState('');
 
   if (!isOpen || !doctor || !slot) return null;
 
@@ -36,27 +37,56 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
 
-    // Authenticate as Patient
-    setUserRole('patient');
+    const patientName = name.trim();
+    const patientEmail = email.trim();
+    const patientContact = contact.trim();
 
-    const patientName = name.trim() || 'Dilshan Silva';
-    const patientEmail = email.trim() || 'dilshan.silva@example.lk';
-    const patientContact = contact.trim() || '+94 77 123 4567';
+    if (tab === 'signup') {
+      if (!patientName) {
+        setErrorMsg('Please enter your full name.');
+        return;
+      }
+      if (!patientEmail) {
+        setErrorMsg('Please enter your email address.');
+        return;
+      }
 
-    registerPatient({
-      name: patientName,
-      email: patientEmail,
-      phone: patientContact,
-      district,
-    });
+      const res = registerPatient({
+        name: patientName,
+        email: patientEmail,
+        phone: patientContact,
+        district,
+        password,
+      });
 
-    // Notify parent to proceed to PayHereCheckoutModal with user's info
-    onAuthSuccess({
-      name: patientName,
-      email: patientEmail,
-      contact: patientContact,
-    });
+      if (!res.success) {
+        setErrorMsg(res.error || 'Registration failed.');
+        return;
+      }
+
+      onAuthSuccess({
+        name: patientName,
+        email: patientEmail,
+        contact: patientContact,
+      });
+    } else {
+      // Sign In mode
+      const res = loginUser(patientEmail, password, 'patient');
+      if (!res.success) {
+        setErrorMsg(res.error || 'Sign in failed.');
+        return;
+      }
+
+      // Retrieve logged in user's details
+      const foundPatient = patients.find((p) => p.email.toLowerCase() === patientEmail.toLowerCase());
+      onAuthSuccess({
+        name: foundPatient ? foundPatient.name : patientEmail.split('@')[0],
+        email: patientEmail,
+        contact: foundPatient ? foundPatient.phone : patientContact,
+      });
+    }
   };
 
   return (
@@ -117,7 +147,10 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
         <div className="flex rounded-2xl bg-[#768c6e]/15 p-1 text-xs font-semibold">
           <button
             type="button"
-            onClick={() => setTab('signup')}
+            onClick={() => {
+              setErrorMsg(null);
+              setTab('signup');
+            }}
             className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               tab === 'signup'
                 ? 'bg-white text-[#2D3728] shadow-sm font-bold'
@@ -128,7 +161,10 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setTab('signin')}
+            onClick={() => {
+              setErrorMsg(null);
+              setTab('signin');
+            }}
             className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               tab === 'signin'
                 ? 'bg-white text-[#2D3728] shadow-sm font-bold'
@@ -138,6 +174,14 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
             <LogIn className="w-4 h-4 text-[#768c6e]" /> Sign In Existing
           </button>
         </div>
+
+        {/* Error Banner */}
+        {errorMsg && (
+          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+            <div className="flex-1">{errorMsg}</div>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -168,10 +212,9 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-[#2D3728]/80 block mb-1">Mobile (+94 SMSway.lk Alerts)</label>
+                  <label className="font-semibold text-[#2D3728]/80 block mb-1">Mobile Contact</label>
                   <input
                     type="tel"
-                    required
                     value={contact}
                     onChange={(e) => setContact(e.target.value)}
                     placeholder="+94 77 123 4567"
@@ -196,19 +239,34 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
                   )}
                 </select>
               </div>
+
+              <div>
+                <label className="font-semibold text-[#2D3728]/80 block mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="e.g. Pass12#"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-sm text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+                />
+                <p className="text-[11px] text-[#2D3728]/60 mt-1.5 leading-tight bg-[#768c6e]/10 p-2 rounded-lg border border-[#768c6e]/20">
+                  <span className="font-semibold text-[#2D3728]">Password rules:</span> 6–10 characters, at least 1 uppercase, 1 lowercase, 1 special character (!@#$%^&*), and min 2 digits.
+                </p>
+              </div>
             </>
           )}
 
           {tab === 'signin' && (
             <>
               <div>
-                <label className="font-semibold text-[#2D3728]/80 block mb-1">Patient Email or Mobile</label>
+                <label className="font-semibold text-[#2D3728]/80 block mb-1">Patient Email Address</label>
                 <input
-                  type="text"
+                  type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="dilshan@example.lk or +94 77..."
+                  placeholder="dilshan@example.lk"
                   className="w-full px-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-sm text-[#2D3728]"
                 />
               </div>
@@ -219,7 +277,7 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="e.g. Pass12#"
                   className="w-full px-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-sm text-[#2D3728]"
                 />
               </div>

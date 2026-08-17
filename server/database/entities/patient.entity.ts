@@ -20,6 +20,9 @@ export class PatientEntity {
   @Column('varchar', { default: 'Colombo' })
   district!: string;
 
+  @Column('varchar', { nullable: true })
+  password?: string;
+
   @Column('varchar', { default: 'Active' })
   status!: 'Active' | 'Deactivated' | 'Suspended';
 

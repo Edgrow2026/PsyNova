@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePsyNova } from '@/lib/store';
 import { UserRole } from '@/lib/types';
-import { User, Stethoscope, ShieldCheck, UserCheck, X, ArrowLeft, LogIn, UserPlus } from 'lucide-react';
+import { User, Stethoscope, ShieldCheck, UserCheck, X, ArrowLeft, LogIn, UserPlus, AlertCircle } from 'lucide-react';
 
 interface RoleSelectorModalProps {
   isOpen: boolean;
@@ -11,11 +11,12 @@ interface RoleSelectorModalProps {
 }
 
 export const RoleSelectorModal: React.FC<RoleSelectorModalProps> = ({ isOpen, onClose }) => {
-  const { setUserRole, user } = usePsyNova();
+  const { setUserRole, registerPatient, loginUser, user } = usePsyNova();
 
   // Step 1: 'select-role', Step 2: 'auth-form'
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Form fields
   const [emailOrPhone, setEmailOrPhone] = useState('');
@@ -69,6 +70,7 @@ export const RoleSelectorModal: React.FC<RoleSelectorModalProps> = ({ isOpen, on
   ];
 
   const handleRoleClick = (role: UserRole) => {
+    setErrorMsg(null);
     if (role === 'guest') {
       setUserRole('guest');
       onClose();
@@ -79,15 +81,44 @@ export const RoleSelectorModal: React.FC<RoleSelectorModalProps> = ({ isOpen, on
 
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     if (!selectedRole) return;
 
-    setUserRole(selectedRole);
+    if (authMode === 'signup') {
+      if (!fullName.trim()) {
+        setErrorMsg('Please enter your full name.');
+        return;
+      }
+      if (selectedRole === 'patient') {
+        const res = registerPatient({
+          name: fullName.trim(),
+          email: emailOrPhone.trim(),
+          phone: '',
+          district,
+          password,
+        });
+        if (!res.success) {
+          setErrorMsg(res.error || 'Failed to complete registration.');
+          return;
+        }
+      } else {
+        setUserRole(selectedRole);
+      }
+    } else {
+      // Sign In mode
+      const res = loginUser(emailOrPhone.trim(), password, selectedRole);
+      if (!res.success) {
+        setErrorMsg(res.error || 'Authentication failed.');
+        return;
+      }
+    }
 
     // Reset local inputs
     setEmailOrPhone('');
     setPassword('');
     setFullName('');
     setSlmcRegNo('');
+    setErrorMsg(null);
     setSelectedRole(null);
     onClose();
   };
@@ -194,6 +225,14 @@ export const RoleSelectorModal: React.FC<RoleSelectorModalProps> = ({ isOpen, on
               </button>
             </div>
 
+            {/* Error Banner */}
+            {errorMsg && (
+              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-start gap-2 animate-shake">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                <div className="flex-1">{errorMsg}</div>
+              </div>
+            )}
+
             <form onSubmit={handleAuthSubmit} className="space-y-4 text-xs sm:text-sm">
               {authMode === 'signup' && (
                 <div>
@@ -241,10 +280,10 @@ export const RoleSelectorModal: React.FC<RoleSelectorModalProps> = ({ isOpen, on
 
               <div>
                 <label className="font-semibold text-[#2D3728]/80 block mb-1">
-                  {selectedRole === 'psychiatrist' ? 'SLMC Email / Mobile Number' : 'Email Address / Mobile'}
+                  {selectedRole === 'psychiatrist' ? 'SLMC Email Address' : 'Email Address'}
                 </label>
                 <input
-                  type="text"
+                  type="email"
                   required
                   value={emailOrPhone}
                   onChange={(e) => setEmailOrPhone(e.target.value)}
@@ -260,15 +299,21 @@ export const RoleSelectorModal: React.FC<RoleSelectorModalProps> = ({ isOpen, on
               </div>
 
               <div>
-                <label className="font-semibold text-[#2D3728]/80 block mb-1">Password</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-semibold text-[#2D3728]/80 block">Password</label>
+                  <span className="text-[10px] text-[#2D3728]/60">6-10 characters</span>
+                </div>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="e.g. Pass12#"
                   className="w-full px-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
                 />
+                <p className="text-[11px] text-[#2D3728]/60 mt-1.5 leading-tight bg-[#768c6e]/10 p-2 rounded-lg border border-[#768c6e]/20">
+                  <span className="font-semibold text-[#2D3728]">Password rules:</span> 6–10 chars, min 1 uppercase, 1 lowercase, 1 special character (!@#$%^&*), and min 2 digits (e.g., <code className="font-mono bg-white px-1 py-0.5 rounded text-[#768c6e] font-bold">Pass12#</code>).
+                </p>
               </div>
 
               <button

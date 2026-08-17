@@ -82,7 +82,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ setActiveTab
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-[#2D3728]">{user.name}</h1>
               <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full bg-[#768c6e]/15 text-[#6B7D5E]">
-                Client ID: {user.clientId || 'PN-PAT-88421'}
+                Client ID: {user.clientId || 'Unassigned'}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-[#2D3728]/70 mt-0.5">{user.email} • Private Patient Portal</p>

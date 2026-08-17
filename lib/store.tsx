@@ -21,9 +21,13 @@ import {
   initialPatients,
 } from './mockData';
 
+import { validateEmail, validatePassword } from './utils';
+
 interface PsyNovaContextType {
   user: User;
   setUserRole: (role: UserRole) => void;
+  logout: () => void;
+  loginUser: (email: string, password: string, role?: UserRole) => { success: boolean; error?: string };
   showRoleSelector: boolean;
   setShowRoleSelector: (show: boolean) => void;
   psychiatrists: Psychiatrist[];
@@ -32,7 +36,7 @@ interface PsyNovaContextType {
   complaints: Complaint[];
   platformSettings: PlatformSettings;
   patients: PatientAccount[];
-  registerPatient: (patientData: { name: string; email: string; phone: string; district?: string }) => PatientAccount;
+  registerPatient: (patientData: { name: string; email: string; phone: string; district?: string; password?: string }) => { success: boolean; patient?: PatientAccount; error?: string };
   
   // Actions
   boostPsychiatrist: (doctorId: string, tier: BoostTier) => { success: boolean; message: string };
@@ -168,37 +172,149 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return initialPatients;
   });
 
-  const registerPatient = (patientData: { name: string; email: string; phone: string; district?: string }): PatientAccount => {
-    const existing = patients.find((p) => p.email.toLowerCase() === patientData.email.toLowerCase());
+  const registerPatient = (patientData: { name: string; email: string; phone: string; district?: string; password?: string }): { success: boolean; patient?: PatientAccount; error?: string } => {
+    // Email validation
+    const emailVal = validateEmail(patientData.email);
+    if (!emailVal.isValid) {
+      return { success: false, error: emailVal.error };
+    }
+
+    // Password validation
+    if (patientData.password) {
+      const passVal = validatePassword(patientData.password);
+      if (!passVal.isValid) {
+        return { success: false, error: passVal.error };
+      }
+    } else {
+      return { success: false, error: 'Password is required for registration.' };
+    }
+
+    const cleanEmail = patientData.email.trim().toLowerCase();
+    const existing = patients.find((p) => p.email.toLowerCase() === cleanEmail);
     if (existing) {
-      return existing;
+      return { success: false, error: 'An account with this email address is already registered. Please Sign In instead.' };
     }
 
     const newPatient: PatientAccount = {
       id: `pat-${Date.now()}`,
       clientId: `PN-PAT-${Math.floor(10000 + Math.random() * 90000)}`,
       name: patientData.name || 'Registered Patient',
-      email: patientData.email,
-      phone: patientData.phone || '+94 77 000 0000',
+      email: patientData.email.trim(),
+      phone: patientData.phone || '',
       district: patientData.district || 'Colombo',
+      password: patientData.password,
       status: 'Active',
       createdAt: new Date().toISOString(),
     };
 
     setPatients((prev) => [newPatient, ...prev]);
-    return newPatient;
+
+    // Update current active user
+    setUser({
+      id: newPatient.id,
+      email: newPatient.email,
+      name: newPatient.name,
+      role: 'patient',
+      clientId: newPatient.clientId,
+    });
+
+    // Save to PostgreSQL database
+    fetch('/api/patients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newPatient),
+    }).catch((e) => console.error('Patient database save error:', e));
+
+    return { success: true, patient: newPatient };
+  };
+
+  const loginUser = (emailInput: string, passwordInput: string, roleRequested?: UserRole): { success: boolean; error?: string } => {
+    const emailVal = validateEmail(emailInput);
+    if (!emailVal.isValid) {
+      return { success: false, error: emailVal.error };
+    }
+
+    const passVal = validatePassword(passwordInput);
+    if (!passVal.isValid) {
+      return { success: false, error: passVal.error };
+    }
+
+    const cleanEmail = emailInput.trim().toLowerCase();
+
+    if (roleRequested === 'psychiatrist') {
+      const doctor = psychiatrists.find((d) => d.name.toLowerCase().includes(cleanEmail) || cleanEmail.includes('doc') || cleanEmail.includes('dr'));
+      const activeDoc = doctor || psychiatrists[0];
+      setUser({
+        id: 'usr-doc1',
+        email: cleanEmail,
+        name: activeDoc ? activeDoc.name : 'Dr. Ananda Wickramasinghe',
+        role: 'psychiatrist',
+        slmcRegNo: activeDoc ? activeDoc.slmcRegNo : 'SLMC-38491',
+        doctorId: activeDoc ? activeDoc.id : 'doc-1',
+      });
+      setShowRoleSelector(false);
+      return { success: true };
+    }
+
+    if (roleRequested === 'admin') {
+      setUser({
+        id: 'adm-1',
+        email: cleanEmail,
+        name: 'System Platform Admin',
+        role: 'admin',
+      });
+      setShowRoleSelector(false);
+      return { success: true };
+    }
+
+    // Patient login & credential check
+    const foundPatient = patients.find((p) => p.email.toLowerCase() === cleanEmail);
+    if (!foundPatient) {
+      return {
+        success: false,
+        error: 'No registered account found with this email. Please check your email or Sign Up for a new account.',
+      };
+    }
+
+    // Password matching check
+    if (foundPatient.password && foundPatient.password !== passwordInput) {
+      return {
+        success: false,
+        error: 'Incorrect password for this email account. Please check your password and try again.',
+      };
+    }
+
+    setUser({
+      id: foundPatient.id,
+      email: foundPatient.email,
+      name: foundPatient.name,
+      role: 'patient',
+      clientId: foundPatient.clientId,
+    });
+    setShowRoleSelector(false);
+    return { success: true };
+  };
+
+  const logout = () => {
+    setUser({
+      id: 'usr-guest',
+      email: 'visitor@psynova.lk',
+      name: 'Guest Visitor',
+      role: 'guest',
+    });
   };
 
   // Initial load from NestJS backend API routes
   useEffect(() => {
     const fetchBackendData = async () => {
       try {
-        const [docsRes, bookingsRes, reviewsRes, complaintsRes, settingsRes] = await Promise.all([
+        const [docsRes, bookingsRes, reviewsRes, complaintsRes, settingsRes, patientsRes] = await Promise.all([
           fetch('/api/psychiatrists'),
           fetch('/api/bookings'),
           fetch('/api/reviews'),
           fetch('/api/complaints'),
           fetch('/api/settings'),
+          fetch('/api/patients'),
         ]);
 
         if (docsRes.ok) {
@@ -207,19 +323,23 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         if (bookingsRes.ok) {
           const bks = await bookingsRes.json();
-          if (Array.isArray(bks) && bks.length > 0) setBookings(bks);
+          if (Array.isArray(bks)) setBookings(bks);
         }
         if (reviewsRes.ok) {
           const revs = await reviewsRes.json();
-          if (Array.isArray(revs) && revs.length > 0) setReviews(revs);
+          if (Array.isArray(revs)) setReviews(revs);
         }
         if (complaintsRes.ok) {
           const cmps = await complaintsRes.json();
-          if (Array.isArray(cmps) && cmps.length > 0) setComplaints(cmps);
+          if (Array.isArray(cmps)) setComplaints(cmps);
         }
         if (settingsRes.ok) {
           const stgs = await settingsRes.json();
           if (stgs) setPlatformSettings(stgs);
+        }
+        if (patientsRes.ok) {
+          const pats = await patientsRes.json();
+          if (Array.isArray(pats)) setPatients(pats);
         }
       } catch (err) {
         console.error('NestJS Backend connection error, fallback to local state:', err);
@@ -258,13 +378,24 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     if (role === 'patient') {
-      newUser = {
-        id: 'pat-1',
-        email: 'dilshan.silva@example.lk',
-        name: 'Dilshan Silva',
-        role: 'patient',
-        clientId: 'PN-PAT-88421',
-      };
+      const latestPatient = patients[0];
+      if (latestPatient) {
+        newUser = {
+          id: latestPatient.id,
+          email: latestPatient.email,
+          name: latestPatient.name,
+          role: 'patient',
+          clientId: latestPatient.clientId,
+        };
+      } else {
+        newUser = {
+          id: `pat-${Date.now()}`,
+          email: '',
+          name: 'Patient User',
+          role: 'patient',
+          clientId: `PN-PAT-${Math.floor(10000 + Math.random() * 90000)}`,
+        };
+      }
     } else if (role === 'psychiatrist') {
       newUser = {
         id: 'usr-doc1',
@@ -672,6 +803,8 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
       value={{
         user,
         setUserRole,
+        logout,
+        loginUser,
         showRoleSelector,
         setShowRoleSelector,
         psychiatrists,
