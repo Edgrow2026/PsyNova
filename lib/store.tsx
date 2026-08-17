@@ -45,6 +45,7 @@ interface PsyNovaContextType {
   addDoctor: (doc: Partial<Psychiatrist>) => void;
   uploadDoctorDoc: (doctorId: string, docName: string) => void;
   deleteDoctorDoc: (doctorId: string, docId: string) => void;
+  addDoctorSlot: (doctorId: string, slot: { id: string; datetime: string; durationMins: number; status: 'available' }) => void;
   
   // Booking actions
   createBooking: (bookingData: {
@@ -614,6 +615,23 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  const addDoctorSlot = (
+    doctorId: string,
+    slot: { id: string; datetime: string; durationMins: number; status: 'available' }
+  ) => {
+    setPsychiatrists((prev) =>
+      prev.map((doc) => {
+        if (doc.id === doctorId) {
+          return {
+            ...doc,
+            upcomingSlots: [slot, ...doc.upcomingSlots],
+          };
+        }
+        return doc;
+      })
+    );
+  };
+
   // Create Booking wrapped in slot checking
   const createBooking = (data: {
     doctorId: string;
@@ -864,6 +882,7 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addDoctor,
         uploadDoctorDoc,
         deleteDoctorDoc,
+        addDoctorSlot,
         createBooking,
         cancelBooking,
         completeBooking,

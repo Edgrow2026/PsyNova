@@ -63,5 +63,8 @@ export function getDatabaseOptions(env: Record<string, string | undefined> = pro
     ssl: isSSL ? { rejectUnauthorized: false } : false,
     synchronize,
     logging: process.env.NODE_ENV === 'development',
+    extra: {
+      connectionTimeoutMillis: 2000,
+    },
   };
 }

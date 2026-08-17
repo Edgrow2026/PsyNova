@@ -7,11 +7,13 @@ import { ReviewEntity } from './entities/review.entity';
 import { ComplaintEntity } from './entities/complaint.entity';
 import { SettingsEntity } from './entities/settings.entity';
 import { initialPsychiatrists, initialBookings, initialReviews, initialComplaints, initialPlatformSettings, initialPatients } from '../../lib/mockData';
+import { PatientAccount } from '../../lib/types';
 
 @Injectable()
 export class DatabaseService {
   private readonly logger = new Logger(DatabaseService.name);
   private isInitialized = false;
+  private inMemoryPatients: PatientAccount[] = [...initialPatients];
 
   async getDataSource() {
     const ds = getAppDataSource();
@@ -117,41 +119,74 @@ export class DatabaseService {
    * Patient Database Operations
    */
   async getAllPatients() {
-    const ds = await this.getDataSource();
-    const patRepo = ds.getRepository(PatientEntity);
-    return patRepo.find({ order: { createdAt: 'DESC' } });
+    try {
+      const ds = await this.getDataSource();
+      const patRepo = ds.getRepository(PatientEntity);
+      return await patRepo.find({ order: { createdAt: 'DESC' } });
+    } catch (err: any) {
+      this.logger.warn(`PostgreSQL connection unavailable (${err.message}). Returning in-memory patient accounts fallback.`);
+      return this.inMemoryPatients;
+    }
   }
 
   async createPatient(data: { id?: string; clientId?: string; name: string; email: string; phone?: string; district?: string; password?: string }) {
-    const ds = await this.getDataSource();
-    const patRepo = ds.getRepository(PatientEntity);
+    try {
+      const ds = await this.getDataSource();
+      const patRepo = ds.getRepository(PatientEntity);
 
-    // Check if patient already exists by email
-    let patient = await patRepo.findOne({ where: { email: data.email } });
-    if (patient) {
-      // Update name/phone/district/password if provided
-      if (data.name) patient.name = data.name;
-      if (data.phone) patient.phone = data.phone;
-      if (data.district) patient.district = data.district;
-      if (data.password) patient.password = data.password;
-      return patRepo.save(patient);
+      // Check if patient already exists by email
+      let patient = await patRepo.findOne({ where: { email: data.email } });
+      if (patient) {
+        // Update name/phone/district/password if provided
+        if (data.name) patient.name = data.name;
+        if (data.phone) patient.phone = data.phone;
+        if (data.district) patient.district = data.district;
+        if (data.password) patient.password = data.password;
+        return await patRepo.save(patient);
+      }
+
+      const id = data.id || `pat-${Date.now()}`;
+      const clientId = data.clientId || `PN-PAT-${Math.floor(10000 + Math.random() * 90000)}`;
+
+      patient = patRepo.create({
+        id,
+        clientId,
+        name: data.name,
+        email: data.email,
+        phone: data.phone || '+94 77 000 0000',
+        district: data.district || 'Colombo',
+        password: data.password || undefined,
+        status: 'Active',
+      });
+
+      return await patRepo.save(patient);
+    } catch (err: any) {
+      this.logger.warn(`PostgreSQL connection unavailable (${err.message}). Saving patient to fallback storage.`);
+      const existing = this.inMemoryPatients.find((p) => p.email.toLowerCase() === data.email.toLowerCase());
+      if (existing) {
+        if (data.name) existing.name = data.name;
+        if (data.phone) existing.phone = data.phone;
+        if (data.district) existing.district = data.district;
+        if (data.password) existing.password = data.password;
+        return existing;
+      }
+
+      const id = data.id || `pat-${Date.now()}`;
+      const clientId = data.clientId || `PN-PAT-${Math.floor(10000 + Math.random() * 90000)}`;
+      const newPat: PatientAccount = {
+        id,
+        clientId,
+        name: data.name,
+        email: data.email,
+        phone: data.phone || '+94 77 000 0000',
+        district: data.district || 'Colombo',
+        password: data.password || undefined,
+        status: 'Active',
+        createdAt: new Date().toISOString(),
+      };
+      this.inMemoryPatients.unshift(newPat);
+      return newPat;
     }
-
-    const id = data.id || `pat-${Date.now()}`;
-    const clientId = data.clientId || `PN-PAT-${Math.floor(10000 + Math.random() * 90000)}`;
-
-    patient = patRepo.create({
-      id,
-      clientId,
-      name: data.name,
-      email: data.email,
-      phone: data.phone || '+94 77 000 0000',
-      district: data.district || 'Colombo',
-      password: data.password || undefined,
-      status: 'Active',
-    });
-
-    return patRepo.save(patient);
   }
 
   /**

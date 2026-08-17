@@ -26,6 +26,7 @@ export const DoctorPortal: React.FC = () => {
     bookings,
     uploadDoctorDoc,
     deleteDoctorDoc,
+    addDoctorSlot,
     boostPsychiatrist,
     unboostPsychiatrist,
     platformSettings,
@@ -83,7 +84,7 @@ export const DoctorPortal: React.FC = () => {
       status: 'available' as const,
     };
 
-    currentDoc.upcomingSlots = [newSlot, ...currentDoc.upcomingSlots];
+    addDoctorSlot(currentDoc.id, newSlot);
     setSlotSuccess(`Future slot added successfully for ${selectedDateTime.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}`);
     setSlotDate('');
   };
