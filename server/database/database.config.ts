@@ -7,6 +7,7 @@ export interface DatabaseConfigEnv {
   DB_PASSWORD?: string;
   DB_NAME?: string;
   DB_SSL?: string;
+  DB_SYNCHRONIZE?: string;
 }
 
 export function getDatabaseOptions(env: Record<string, string | undefined> = process.env): DataSourceOptions {
@@ -16,6 +17,7 @@ export function getDatabaseOptions(env: Record<string, string | undefined> = pro
   const password = env.DB_PASSWORD;
   const database = env.DB_NAME;
   const sslStr = env.DB_SSL;
+  const synchronizeStr = env.DB_SYNCHRONIZE;
 
   const missing: string[] = [];
   if (!host) missing.push('DB_HOST');
@@ -49,6 +51,7 @@ export function getDatabaseOptions(env: Record<string, string | undefined> = pro
   }
 
   const isSSL = sslStr?.toLowerCase() === 'true' || sslStr === '1';
+  const synchronize = synchronizeStr?.toLowerCase() === 'true' || synchronizeStr === '1';
 
   return {
     type: 'postgres',
@@ -58,7 +61,7 @@ export function getDatabaseOptions(env: Record<string, string | undefined> = pro
     password,
     database,
     ssl: isSSL ? { rejectUnauthorized: false } : false,
-    synchronize: false, // Strict migration-driven schema evolution
+    synchronize,
     logging: process.env.NODE_ENV === 'development',
   };
 }
