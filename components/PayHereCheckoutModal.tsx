@@ -362,7 +362,7 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-[#2D3728]/80 block mb-1">Mobile (+94 SMSway.lk)</label>
+                    <label className="text-xs font-semibold text-[#2D3728]/80 block mb-1">Mobile (+94 Notify.lk)</label>
                     <input
                       type="tel"
                       required

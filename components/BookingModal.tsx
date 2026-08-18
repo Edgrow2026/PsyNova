@@ -142,7 +142,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ doctor, slot, isOpen
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-[#2D3728]/80 block mb-1">Mobile (for SMSway.lk SMS)</label>
+                  <label className="text-xs font-semibold text-[#2D3728]/80 block mb-1">Mobile (for Notify.lk SMS)</label>
                   <input
                     type="tel"
                     required
@@ -195,7 +195,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ doctor, slot, isOpen
             <div>
               <h3 className="text-lg font-bold text-[#2D3728]">Consultation Reserved Successfully!</h3>
               <p className="text-xs text-[#2D3728]/70 mt-1">
-                SMS notification sent via SMSway.lk to <strong className="text-[#2D3728]">{createdBooking.patientContact}</strong>
+                SMS notification sent via Notify.lk to <strong className="text-[#2D3728]">{createdBooking.patientContact}</strong>
               </p>
             </div>
 

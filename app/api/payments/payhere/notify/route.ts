@@ -3,7 +3,7 @@ import { getNestServices } from '../../../../../server/nest-app';
 
 export async function POST(req: NextRequest) {
   try {
-    const { payHereService, bookingsService, smsWayService } = await getNestServices();
+    const { payHereService, bookingsService, notifyLkService, smsWayService } = await getNestServices();
 
     let body: any = {};
     const contentType = req.headers.get('content-type') || '';
@@ -61,9 +61,10 @@ export async function POST(req: NextRequest) {
 
     if (result.success && result.isNewlyConfirmed) {
       try {
-        await smsWayService.sendBookingConfirmation(result.booking);
-        await smsWayService.sendDoctorAlert(result.booking);
-        console.log(`[PayHere Webhook Notify] Booking ${order_id} confirmed & SMS notifications dispatched via SMSWay.lk`);
+        const smsService = notifyLkService || smsWayService;
+        await smsService.sendBookingConfirmation(result.booking);
+        await smsService.sendDoctorAlert(result.booking);
+        console.log(`[PayHere Webhook Notify] Booking ${order_id} confirmed & SMS notifications dispatched via Notify.lk`);
       } catch (smsErr) {
         console.error('[PayHere Webhook Notify] SMS dispatch error:', smsErr);
       }

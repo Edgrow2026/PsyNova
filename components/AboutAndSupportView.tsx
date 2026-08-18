@@ -29,7 +29,7 @@ export const AboutAndSupportView: React.FC<AboutAndSupportViewProps> = () => {
     },
     {
       q: 'How does PayHere payment and session confirmation work?',
-      a: 'When booking, session fees are securely processed in LKR using PayHere MD5 hash verification. Once verified, instant confirmation SMS notifications are dispatched via SMSway.lk.',
+      a: 'When booking, session fees are securely processed in LKR using PayHere MD5 hash verification. Once verified, instant confirmation SMS notifications are dispatched via Notify.lk.',
     },
     {
       q: 'Is my identity and consultation private?',
@@ -93,7 +93,7 @@ export const AboutAndSupportView: React.FC<AboutAndSupportViewProps> = () => {
         <div className="max-w-2xl mx-auto p-6 sm:p-8 rounded-[28px] bg-[#F7F5EF] border border-[#768c6e]/20 shadow-md">
           <h3 className="text-xl font-bold text-[#2D3728] mb-2">Patient Helpdesk Inquiry</h3>
           <p className="text-xs text-[#2D3728]/70 mb-6">
-            Our team responds to inquiries within 2 hours. Notification updates are sent via SMSway.lk.
+            Our team responds to inquiries within 2 hours. Notification updates are sent via Notify.lk.
           </p>
 
           {supportMessageSent ? (

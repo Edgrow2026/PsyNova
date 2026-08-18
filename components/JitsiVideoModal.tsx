@@ -213,7 +213,7 @@ export const JitsiVideoModal: React.FC<JitsiVideoModalProps> = ({
                   : 'bg-slate-800/60 text-slate-400 hover:text-white'
               }`}
             >
-              <MessageSquare className="w-3.5 h-3.5" /> SMSway.lk Alert
+              <MessageSquare className="w-3.5 h-3.5" /> Notify.lk Alert
             </button>
           </div>
 
@@ -305,7 +305,7 @@ export const JitsiVideoModal: React.FC<JitsiVideoModalProps> = ({
               <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-start gap-3">
                 <Sparkles className="w-5 h-5 shrink-0 text-emerald-400 mt-0.5" />
                 <div>
-                  <h4 className="font-bold text-slate-100">SMSway.lk Instant Gateway Dispatch</h4>
+                  <h4 className="font-bold text-slate-100">Notify.lk Instant Gateway Dispatch</h4>
                   <p className="mt-1 text-slate-300">
                     Send an urgent SMS alert to the patient’s mobile phone in Sri Lanka (<span className="font-mono">{booking.patientContact}</span>) if they are late or disconnected.
                   </p>
@@ -315,7 +315,7 @@ export const JitsiVideoModal: React.FC<JitsiVideoModalProps> = ({
               {smsSent && (
                 <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>SMS successfully dispatched via SMSway.lk Sri Lanka telco gateway!</span>
+                  <span>SMS successfully dispatched via Notify.lk Sri Lanka telco gateway!</span>
                 </div>
               )}
 
@@ -349,10 +349,10 @@ export const JitsiVideoModal: React.FC<JitsiVideoModalProps> = ({
                 className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white flex items-center justify-center gap-2 shadow-lg"
               >
                 {isSendingSms ? (
-                  <span>Sending via SMSway.lk...</span>
+                  <span>Sending via Notify.lk...</span>
                 ) : (
                   <>
-                    <Send className="w-4 h-4" /> Dispatch SMSway.lk Alert Now
+                    <Send className="w-4 h-4" /> Dispatch Notify.lk Alert Now
                   </>
                 )}
               </button>

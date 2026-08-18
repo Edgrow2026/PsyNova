@@ -986,11 +986,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
             </div>
           </div>
 
-          {/* PayHere & SMSway.lk Gateway Card */}
+          {/* PayHere & Notify.lk Gateway Card */}
           <div className="p-6 sm:p-8 rounded-[28px] bg-[#F7F5EF] border border-[#768c6e]/20 shadow-md space-y-6">
             <div className="flex items-center justify-between border-b border-[#768c6e]/15 pb-3">
               <div>
-                <h2 className="text-xl font-bold text-[#2D3728]">PayHere & SMSway.lk Status</h2>
+                <h2 className="text-xl font-bold text-[#2D3728]">PayHere & Notify.lk Status</h2>
                 <p className="text-xs text-[#2D3728]/70">Sri Lanka local Payment & Telco Gateway integrations</p>
               </div>
               <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-800 border border-emerald-500/30 font-bold">
@@ -1011,8 +1011,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
 
               <div className="p-4 rounded-2xl bg-white border border-[#768c6e]/20 space-y-3">
                 <div className="flex items-center justify-between font-bold text-[#2D3728]">
-                  <span>SMSway.lk SMS Gateway</span>
-                  <span className="font-mono text-[#6B7D5E]">Sender: PsyNovaLK</span>
+                  <span>Notify.lk SMS Gateway</span>
+                  <span className="font-mono text-[#6B7D5E]">Sender: NotifyDEMO</span>
                 </div>
                 <p className="text-[#2D3728]/70">
                   Automated appointment dispatch & Jitsi video consultation reminders sent to customer booking phone numbers (<strong className="font-mono">+94</strong>).
@@ -1054,14 +1054,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
                             body: JSON.stringify({ action: 'test', recipient: target }),
                           });
                           const data = await res.json();
-                          alert(`SMSway.lk Test Result:\nStatus: ${data.status}\nMessage ID: ${data.messageId || data.log?.id}\nTarget Phone: ${data.log?.formattedRecipient || target}`);
+                          alert(`Notify.lk Test Result:\nStatus: ${data.status}\nMessage ID: ${data.messageId || data.log?.id}\nTarget Phone: ${data.log?.formattedRecipient || target}`);
                         } catch (e: any) {
-                          alert('SMSway test error: ' + e.message);
+                          alert('Notify.lk test error: ' + e.message);
                         }
                       }}
                       className="btn-secondary text-[11px] py-1.5 px-3 shrink-0"
                     >
-                      Run SMSway.lk Test
+                      Run Notify.lk Test
                     </button>
                   </div>
                 </div>

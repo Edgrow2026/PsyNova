@@ -4,7 +4,7 @@ import { ReviewsService } from './reviews/reviews.service';
 import { ComplaintsService } from './complaints/complaints.service';
 import { AuthService } from './auth/auth.service';
 import { SettingsService } from './settings/settings.service';
-import { SmsWayService } from './sms/smsway.service';
+import { NotifyLkService } from './sms/notifylk.service';
 import { PayHereService } from './payments/payhere.service';
 import { DatabaseService } from './database/database.service';
 
@@ -14,7 +14,7 @@ const reviewsService = new ReviewsService(psychiatristsService);
 const complaintsService = new ComplaintsService(bookingsService);
 const authService = new AuthService();
 const settingsService = new SettingsService();
-const smsWayService = new SmsWayService();
+const notifyLkService = new NotifyLkService();
 const payHereService = new PayHereService();
 const databaseService = new DatabaseService();
 
@@ -26,7 +26,8 @@ export async function getNestServices() {
     complaintsService,
     authService,
     settingsService,
-    smsWayService,
+    notifyLkService,
+    smsWayService: notifyLkService,
     payHereService,
     databaseService,
   };

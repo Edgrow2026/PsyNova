@@ -173,7 +173,7 @@ export const DoctorPortal: React.FC = () => {
           <div className="text-2xl sm:text-3xl font-extrabold text-[#2D3728] font-mono">
             LKR {platformCommission.toLocaleString()}
           </div>
-          <p className="text-[11px] text-[#2D3728]/60">Deducted for tele-hosting & SMSway notifications</p>
+          <p className="text-[11px] text-[#2D3728]/60">Deducted for tele-hosting & Notify.lk notifications</p>
         </div>
 
         {/* Card 3: Net Earnings (Solid Olive) */}
@@ -526,12 +526,12 @@ export const DoctorPortal: React.FC = () => {
         </div>
       </div>
 
-      {/* SMSway.lk Sri Lanka Patient Notification Dispatcher */}
+      {/* Notify.lk Sri Lanka Patient Notification Dispatcher */}
       <div className="p-6 sm:p-8 rounded-[28px] bg-[#F7F5EF] border border-[#768c6e]/20 shadow-md space-y-4">
         <div className="border-b border-[#768c6e]/15 pb-3">
-          <h2 className="text-xl font-bold text-[#2D3728]">SMSway.lk Patient Notification Console</h2>
+          <h2 className="text-xl font-bold text-[#2D3728]">Notify.lk Patient Notification Console</h2>
           <p className="text-xs text-[#2D3728]/70 mt-0.5">
-            Directly dispatch SMS alerts to Sri Lankan patient mobile numbers (+94) via official SMSway telco gateway.
+            Directly dispatch SMS alerts to Sri Lankan patient mobile numbers (+94) via official Notify.lk telco gateway.
           </p>
         </div>
 
@@ -591,9 +591,9 @@ export const DoctorPortal: React.FC = () => {
                       body: JSON.stringify({ recipient, message: testSmsMsg }),
                     });
                     const data = await res.json();
-                    setSmsResult(`SMSway Dispatched to ${recipient}! Status: ${data.status || 'Success'} (ID: ${data.messageId || 'SMSWAY-102'})`);
+                    setSmsResult(`Notify.lk Dispatched to ${recipient}! Status: ${data.status || 'Success'} (ID: ${data.messageId || 'NOTIFYLK-102'})`);
                   } catch (e: any) {
-                    setSmsResult('SMSway dispatch error: ' + e.message);
+                    setSmsResult('Notify.lk dispatch error: ' + e.message);
                   } finally {
                     setSmsSending(false);
                   }
@@ -601,7 +601,7 @@ export const DoctorPortal: React.FC = () => {
                 disabled={smsSending}
                 className="btn-primary text-xs py-2 px-4 whitespace-nowrap"
               >
-                {smsSending ? 'Dispatching...' : 'Send SMSway Alert'}
+                {smsSending ? 'Dispatching...' : 'Send Notify.lk Alert'}
               </button>
             </div>
           </div>

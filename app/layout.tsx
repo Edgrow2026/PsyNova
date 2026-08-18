@@ -4,7 +4,7 @@ import './globals.css'; // Global styles
 
 export const metadata: Metadata = {
   title: 'PsyNova | Digital Psychiatry & Mental Health Platform',
-  description: 'Sri Lanka’s premier tele-psychiatry platform with PayHere payments and SMSway notifications.',
+  description: 'Sri Lanka’s premier tele-psychiatry platform with PayHere payments and Notify.lk notifications.',
   openGraph: {
     title: 'PsyNova Psychiatry Platform',
     description: 'Digital Psychiatry & Mental Health Platform for Sri Lanka.',
