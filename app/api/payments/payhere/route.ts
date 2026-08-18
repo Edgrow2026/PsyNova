@@ -12,7 +12,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { payHereService, bookingsService, smsWayService } = await getNestServices();
+    const { payHereService, bookingsService, notifyLkService, smsWayService } = await getNestServices();
+    const smsService = notifyLkService || smsWayService;
     const body = await req.json();
 
     if (body.action === 'hash') {
@@ -82,8 +83,8 @@ export async function POST(req: NextRequest) {
       );
 
       if (result.success && result.isNewlyConfirmed) {
-        await smsWayService.sendBookingConfirmation(result.booking);
-        await smsWayService.sendDoctorAlert(result.booking);
+        await smsService.sendBookingConfirmation(result.booking);
+        await smsService.sendDoctorAlert(result.booking);
       }
 
       return NextResponse.json({
@@ -105,8 +106,8 @@ export async function POST(req: NextRequest) {
         `PayHere Gateway IPN Callback (status_code ${statusCode})`
       );
       if (result.success && result.isNewlyConfirmed) {
-        await smsWayService.sendBookingConfirmation(result.booking);
-        await smsWayService.sendDoctorAlert(result.booking);
+        await smsService.sendBookingConfirmation(result.booking);
+        await smsService.sendDoctorAlert(result.booking);
       }
       return NextResponse.json({ status: 'PROCESSED', verified: true, booking: result.booking });
     }

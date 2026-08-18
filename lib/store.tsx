@@ -699,6 +699,13 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
       phone: data.patientContact,
     });
 
+    // Sync booking to backend repository
+    fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newBooking),
+    }).catch((e) => console.error('Booking backend sync error:', e));
+
     // Trigger automatic SMS confirmation after successful payment to the customer's phone number
     fetch('/api/sms', {
       method: 'POST',

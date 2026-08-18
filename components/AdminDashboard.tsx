@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { usePsyNova } from '@/lib/store';
 import { DoctorStatus, BoostTier } from '@/lib/types';
 import {
@@ -61,6 +61,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
   const [patientSearchQuery, setPatientSearchQuery] = useState<string>('');
   const [bookingSearchQuery, setBookingSearchQuery] = useState<string>('');
   const [testSmsRecipient, setTestSmsRecipient] = useState<string>('');
+  const [smsGatewayInfo, setSmsGatewayInfo] = useState<{
+    gateway: string;
+    senderId: string;
+    hasApiKey: boolean;
+    hasUserId: boolean;
+    isConfigured: boolean;
+    logs: any[];
+  } | null>(null);
+  const [isTestingSms, setIsTestingSms] = useState(false);
+  const [smsTestFeedback, setSmsTestFeedback] = useState<{ success: boolean; message: string; details?: any } | null>(null);
+
+  // Fetch SMS gateway status & logs
+  const fetchSmsInfo = useCallback(async () => {
+    try {
+      const res = await fetch('/api/sms');
+      if (res.ok) {
+        const data = await res.json();
+        setSmsGatewayInfo(data);
+      }
+    } catch (e) {
+      console.warn('Failed to load SMS gateway status:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadStatus = async () => {
+      try {
+        const res = await fetch('/api/sms');
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          setSmsGatewayInfo(data);
+        }
+      } catch (e) {
+        console.warn('Failed to load SMS gateway status:', e);
+      }
+    };
+    loadStatus();
+    const interval = setInterval(loadStatus, 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Boost action message
   const [boostMsg, setBoostMsg] = useState<string | null>(null);
@@ -1009,24 +1053,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white border border-[#768c6e]/20 space-y-3">
-                <div className="flex items-center justify-between font-bold text-[#2D3728]">
-                  <span>Notify.lk SMS Gateway</span>
-                  <span className="font-mono text-[#6B7D5E]">Sender: NotifyDEMO</span>
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#768c6e]/20 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 font-bold text-[#2D3728]">
+                  <div className="flex items-center gap-2">
+                    <span>Notify.lk Sri Lanka SMS Gateway</span>
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                      smsGatewayInfo?.isConfigured
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border border-amber-300'
+                    }`}>
+                      {smsGatewayInfo?.isConfigured ? 'Live Credentials Connected' : 'Simulated Gateway Mode'}
+                    </span>
+                  </div>
+                  <span className="font-mono text-xs text-[#6B7D5E]">
+                    Sender ID: <strong>{smsGatewayInfo?.senderId || 'NotifyDEMO'}</strong>
+                  </span>
                 </div>
-                <p className="text-[#2D3728]/70">
-                  Automated appointment dispatch & Jitsi video consultation reminders sent to customer booking phone numbers (<strong className="font-mono">+94</strong>).
+
+                <p className="text-[#2D3728]/70 text-xs">
+                  Automated appointment dispatch & Jitsi video consultation reminders sent to customer booking phone numbers (<strong className="font-mono">+94 7X XXX XXXX</strong>).
                 </p>
+
+                {/* Gateway credentials checklist */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] p-3 rounded-xl bg-[#F7F5EF] border border-[#768c6e]/20">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${smsGatewayInfo?.hasUserId ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                    <span>User ID (<code className="font-mono">NOTIFYLK_USER_ID</code>): {smsGatewayInfo?.hasUserId ? 'Configured' : 'Not Set (Set in environment)'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${smsGatewayInfo?.hasApiKey ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                    <span>API Key (<code className="font-mono">NOTIFYLK_API_KEY</code>): {smsGatewayInfo?.hasApiKey ? 'Configured' : 'Not Set (Set in environment)'}</span>
+                  </div>
+                </div>
+
+                {/* Live Diagnostic SMS Dispatch Tester */}
                 <div className="space-y-2 pt-2 border-t border-[#768c6e]/15">
                   <label className="text-[11px] font-semibold text-[#2D3728]/80 block">
-                    Target Customer Phone Number (From Booking or Custom)
+                    Diagnostic SMS Dispatch Tester
                   </label>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="tel"
-                      value={testSmsRecipient || (bookings[0]?.patientContact || '+94 77 123 4567')}
+                      value={testSmsRecipient}
                       onChange={(e) => setTestSmsRecipient(e.target.value)}
-                      placeholder="e.g. +94771234567"
+                      placeholder="e.g. +94771234567 or 0771234567"
                       className="flex-1 px-3 py-1.5 rounded-xl border border-[#768c6e]/30 bg-white text-xs font-mono text-[#2D3728]"
                     />
                     {bookings.length > 0 && (
@@ -1045,8 +1115,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
                       </select>
                     )}
                     <button
+                      disabled={isTestingSms}
                       onClick={async () => {
                         const target = testSmsRecipient || (bookings[0]?.patientContact || '+94771234567');
+                        setIsTestingSms(true);
+                        setSmsTestFeedback(null);
                         try {
                           const res = await fetch('/api/sms', {
                             method: 'POST',
@@ -1054,16 +1127,110 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
                             body: JSON.stringify({ action: 'test', recipient: target }),
                           });
                           const data = await res.json();
-                          alert(`Notify.lk Test Result:\nStatus: ${data.status}\nMessage ID: ${data.messageId || data.log?.id}\nTarget Phone: ${data.log?.formattedRecipient || target}`);
+                          fetchSmsInfo();
+                          if (data.status === 'DELIVERED') {
+                            setSmsTestFeedback({
+                              success: true,
+                              message: `SMS successfully delivered to ${data.log?.formattedRecipient || target} via Notify.lk telco gateway! (Ref: ${data.messageId})`,
+                              details: data,
+                            });
+                          } else if (data.status === 'SIMULATED') {
+                            setSmsTestFeedback({
+                              success: true,
+                              message: `Simulated SMS dispatched to ${data.log?.formattedRecipient || target}. (Note: Add NOTIFYLK_USER_ID and NOTIFYLK_API_KEY in environment variables to deliver live carrier SMS).`,
+                              details: data,
+                            });
+                          } else {
+                            setSmsTestFeedback({
+                              success: false,
+                              message: `Notify.lk Gateway reported: ${data.error || data.log?.errorNote || 'Dispatch failed'}`,
+                              details: data,
+                            });
+                          }
                         } catch (e: any) {
-                          alert('Notify.lk test error: ' + e.message);
+                          setSmsTestFeedback({
+                            success: false,
+                            message: 'Network error calling SMS gateway: ' + e.message,
+                          });
+                        } finally {
+                          setIsTestingSms(false);
                         }
                       }}
-                      className="btn-secondary text-[11px] py-1.5 px-3 shrink-0"
+                      className="btn-secondary text-[11px] py-1.5 px-3 shrink-0 flex items-center justify-center gap-1.5"
                     >
-                      Run Notify.lk Test
+                      {isTestingSms ? 'Dispatching...' : 'Run Notify.lk Test'}
                     </button>
                   </div>
+
+                  {/* Feedback Box */}
+                  {smsTestFeedback && (
+                    <div className={`mt-2 p-3 rounded-xl text-xs flex items-start gap-2 ${
+                      smsTestFeedback.success
+                        ? 'bg-emerald-50 text-emerald-900 border border-emerald-300'
+                        : 'bg-rose-50 text-rose-900 border border-rose-300'
+                    }`}>
+                      <span className="font-bold">{smsTestFeedback.success ? '✓' : '⚠️'}</span>
+                      <div className="flex-1">
+                        <p>{smsTestFeedback.message}</p>
+                        {smsTestFeedback.details?.log?.errorNote && (
+                          <p className="font-mono text-[10px] mt-1 opacity-80">{smsTestFeedback.details.log.errorNote}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent SMS Dispatch Logs */}
+                <div className="pt-3 border-t border-[#768c6e]/15">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold text-[#2D3728] uppercase tracking-wider">
+                      Recent Notify.lk SMS Logs ({smsGatewayInfo?.logs?.length || 0})
+                    </span>
+                    <button
+                      onClick={fetchSmsInfo}
+                      className="text-[10px] font-mono text-[#6B7D5E] hover:underline"
+                    >
+                      Refresh Logs
+                    </button>
+                  </div>
+
+                  {smsGatewayInfo?.logs && smsGatewayInfo.logs.length > 0 ? (
+                    <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                      {smsGatewayInfo.logs.slice(0, 10).map((log: any) => (
+                        <div
+                          key={log.id}
+                          className="p-2.5 rounded-xl bg-[#F7F5EF] border border-[#768c6e]/15 text-[11px] space-y-1"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono font-bold text-[#2D3728]">
+                              {log.formattedRecipient || log.recipient}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold font-mono ${
+                              log.status === 'DELIVERED'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : log.status === 'SIMULATED'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-rose-100 text-rose-800'
+                            }`}>
+                              {log.status}
+                            </span>
+                          </div>
+                          <p className="text-[#2D3728]/80 text-[10px] line-clamp-2">{log.message}</p>
+                          <div className="flex items-center justify-between text-[9px] text-[#2D3728]/60 font-mono pt-1 border-t border-[#768c6e]/10">
+                            <span>Ref: {log.id} (Sender: {log.senderId})</span>
+                            <span>{new Date(log.timestamp).toLocaleTimeString()}</span>
+                          </div>
+                          {log.errorNote && (
+                            <p className="text-[9px] font-mono text-rose-700 bg-rose-50 p-1 rounded">
+                              {log.errorNote}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-[#2D3728]/50 italic">No SMS dispatches recorded yet in this session.</p>
+                  )}
                 </div>
               </div>
             </div>
