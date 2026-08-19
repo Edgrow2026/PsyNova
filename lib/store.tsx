@@ -56,6 +56,7 @@ interface PsyNovaContextType {
     patientEmail: string;
     patientContact: string;
   }) => { success: boolean; booking?: Booking; error?: string };
+  addConfirmedBooking: (booking: Booking) => void;
   cancelBooking: (bookingId: string, note?: string) => void;
   completeBooking: (bookingId: string) => void;
   markPayoutPaid: (bookingId: string) => void;
@@ -722,6 +723,32 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: true, booking: newBooking };
   };
 
+  const addConfirmedBooking = (booking: Booking) => {
+    setBookings((prev) => {
+      const exists = prev.some((b) => b.id === booking.id);
+      if (exists) {
+        return prev.map((b) => (b.id === booking.id ? booking : b));
+      }
+      return [booking, ...prev];
+    });
+
+    if (booking.doctorId) {
+      setPsychiatrists((prev) =>
+        prev.map((d) => {
+          if (d.id === booking.doctorId) {
+            return {
+              ...d,
+              upcomingSlots: d.upcomingSlots.map((s) =>
+                s.datetime === booking.slotDatetime ? { ...s, status: 'booked' } : s
+              ),
+            };
+          }
+          return d;
+        })
+      );
+    }
+  };
+
   const cancelBooking = (bookingId: string, note?: string) => {
     setBookings((prev) =>
       prev.map((b) => {
@@ -904,6 +931,7 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteDoctorDoc,
         addDoctorSlot,
         createBooking,
+        addConfirmedBooking,
         cancelBooking,
         completeBooking,
         markPayoutPaid,

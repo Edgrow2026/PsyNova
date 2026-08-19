@@ -33,7 +33,7 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { user, patients } = usePsyNova();
+  const { user, patients, addConfirmedBooking, registerPatient } = usePsyNova();
 
   const activePatientName =
     user.role === 'patient' && user.name && user.name !== 'Guest Visitor' ? user.name : 'Dilshan Silva';
@@ -136,6 +136,23 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
       if (!res.ok || !data.booking || data.booking.status !== 'confirmed') {
         throw new Error(data.error || `PayHere Payment Declined (Status code: ${statusCode})`);
       }
+
+      // Sync confirmed booking into local state store and update doctor slot
+      addConfirmedBooking(data.booking);
+
+      // Register or link patient account
+      registerPatient({
+        name: patientName,
+        email: patientEmail,
+        phone: patientContact,
+      });
+
+      // Also ensure client-triggered SMS confirmation fires if server SMS had any network delay
+      fetch('/api/sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'booking-confirmation', booking: data.booking }),
+      }).catch((err) => console.warn('Secondary SMS confirmation trigger:', err));
 
       onSuccess(data.booking);
       onClose();

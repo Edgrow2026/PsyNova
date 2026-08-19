@@ -27,7 +27,7 @@ interface HomeViewProps {
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctorToBook }) => {
-  const { psychiatrists } = usePsyNova();
+  const { psychiatrists, platformSettings } = usePsyNova();
   const [selectedDoctorForModal, setSelectedDoctorForModal] = useState<Psychiatrist | null>(null);
 
   // Filter ONLY boosted psychiatrists for the Home Page Spotlight
@@ -56,7 +56,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
         {/* Full-Covered Background Image */}
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1920&q=80"
+            src={platformSettings?.heroImageUrl || "/hero-mindfulness.jpg"}
             alt="Calm mindfulness healthcare setting"
             className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000"
             referrerPolicy="no-referrer"

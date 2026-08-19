@@ -132,6 +132,7 @@ export interface Complaint {
 export interface PlatformSettings {
   commissionRate: number; // e.g. 18 (percent)
   maxBoostedDoctors: number; // strictly 9 max, range 3-9
+  heroImageUrl?: string;
 }
 
 export interface SmsLog {
