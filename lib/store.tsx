@@ -81,106 +81,23 @@ const PsyNovaContext = createContext<PsyNovaContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY = 'psynova_state_v2';
 
+const initialGuestUser: User = {
+  id: 'usr-guest',
+  email: 'visitor@psynova.lk',
+  name: 'Guest Visitor',
+  role: 'guest',
+};
+
 export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>(() => {
-    if (typeof window === 'undefined')
-      return { id: 'usr-guest', email: 'visitor@psynova.lk', name: 'Guest Visitor', role: 'guest' };
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.user) return parsed.user;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return { id: 'usr-guest', email: 'visitor@psynova.lk', name: 'Guest Visitor', role: 'guest' };
-  });
-
+  const [user, setUser] = useState<User>(initialGuestUser);
   const [showRoleSelector, setShowRoleSelector] = useState<boolean>(false);
-  const [psychiatrists, setPsychiatrists] = useState<Psychiatrist[]>(() => {
-    if (typeof window === 'undefined') return initialPsychiatrists;
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.psychiatrists) return parsed.psychiatrists;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return initialPsychiatrists;
-  });
-
-  const [bookings, setBookings] = useState<Booking[]>(() => {
-    if (typeof window === 'undefined') return initialBookings;
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.bookings) return parsed.bookings;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return initialBookings;
-  });
-
-  const [reviews, setReviews] = useState<Review[]>(() => {
-    if (typeof window === 'undefined') return initialReviews;
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.reviews) return parsed.reviews;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return initialReviews;
-  });
-
-  const [complaints, setComplaints] = useState<Complaint[]>(() => {
-    if (typeof window === 'undefined') return initialComplaints;
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.complaints) return parsed.complaints;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return initialComplaints;
-  });
-
-  const [platformSettings, setPlatformSettings] = useState<PlatformSettings>(() => {
-    if (typeof window === 'undefined') return initialPlatformSettings;
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.platformSettings) return parsed.platformSettings;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return initialPlatformSettings;
-  });
-
-  const [patients, setPatients] = useState<PatientAccount[]>(() => {
-    if (typeof window === 'undefined') return initialPatients;
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.patients && Array.isArray(parsed.patients)) return parsed.patients;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return initialPatients;
-  });
+  const [psychiatrists, setPsychiatrists] = useState<Psychiatrist[]>(initialPsychiatrists);
+  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
+  const [complaints, setComplaints] = useState<Complaint[]>(initialComplaints);
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings>(initialPlatformSettings);
+  const [patients, setPatients] = useState<PatientAccount[]>(initialPatients);
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
 
   const registerPatient = (patientData: { name: string; email: string; phone: string; district?: string; password?: string }): { success: boolean; patient?: PatientAccount; error?: string } => {
     // Email validation
@@ -314,9 +231,27 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  // Initial load from NestJS backend API routes
+  // Initial load from localStorage & NestJS backend API routes
   useEffect(() => {
-    const fetchBackendData = async () => {
+    const initStore = async () => {
+      try {
+        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.user) setUser(parsed.user);
+          if (parsed.psychiatrists && Array.isArray(parsed.psychiatrists)) setPsychiatrists(parsed.psychiatrists);
+          if (parsed.bookings && Array.isArray(parsed.bookings)) setBookings(parsed.bookings);
+          if (parsed.reviews && Array.isArray(parsed.reviews)) setReviews(parsed.reviews);
+          if (parsed.complaints && Array.isArray(parsed.complaints)) setComplaints(parsed.complaints);
+          if (parsed.platformSettings) setPlatformSettings(parsed.platformSettings);
+          if (parsed.patients && Array.isArray(parsed.patients)) setPatients(parsed.patients);
+        }
+      } catch (e) {
+        console.error('Error loading saved PsyNova state:', e);
+      } finally {
+        setIsHydrated(true);
+      }
+
       try {
         const [docsRes, bookingsRes, reviewsRes, complaintsRes, settingsRes, patientsRes] = await Promise.all([
           fetch('/api/psychiatrists'),
@@ -356,11 +291,12 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     };
 
-    fetchBackendData();
+    initStore();
   }, []);
 
-  // Sync state to localStorage
+  // Sync state to localStorage (only after initial hydration to prevent overwriting)
   useEffect(() => {
+    if (!isHydrated) return;
     try {
       localStorage.setItem(
         LOCAL_STORAGE_KEY,
@@ -377,7 +313,7 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (e) {
       console.error('Failed to save state:', e);
     }
-  }, [user, psychiatrists, bookings, reviews, complaints, platformSettings, patients]);
+  }, [isHydrated, user, psychiatrists, bookings, reviews, complaints, platformSettings, patients]);
 
   // Automated 5-minute pre-session SMS reminder scanner
   useEffect(() => {
