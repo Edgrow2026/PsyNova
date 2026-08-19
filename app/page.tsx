@@ -137,6 +137,7 @@ function MainAppContent() {
         doctor={bookingDoctor}
         slot={bookingSlot}
         isOpen={isPayHereModalOpen}
+        patientDataOverride={patientDataOverride}
         onClose={() => setIsPayHereModalOpen(false)}
         onSuccess={handleBookingSuccess}
       />

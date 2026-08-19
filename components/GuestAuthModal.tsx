@@ -13,6 +13,22 @@ interface GuestAuthModalProps {
   onAuthSuccess: (patientData: { name: string; email: string; contact: string }) => void;
 }
 
+const normalizeSLPhone = (phone: string) => {
+  if (!phone || typeof phone !== 'string') return { clean: '', formatted: '', isValid: false };
+  let digits = phone.replace(/[^0-9]/g, '');
+  if (digits.startsWith('0094')) digits = digits.substring(2);
+  else if (digits.startsWith('940') && digits.length === 12) digits = '94' + digits.substring(3);
+  else if (digits.startsWith('0') && digits.length === 10) digits = '94' + digits.substring(1);
+  else if (digits.length === 9) digits = '94' + digits;
+  else if (!digits.startsWith('94') && digits.length >= 9) digits = '94' + digits;
+
+  const isValid = digits.startsWith('94') && digits.length === 11;
+  const formatted = digits.length === 11
+    ? `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 7)} ${digits.substring(7)}`
+    : digits ? `+${digits}` : '';
+  return { clean: digits, formatted, isValid };
+};
+
 export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
   isOpen,
   doctor,
@@ -34,6 +50,7 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
   if (!isOpen || !doctor || !slot) return null;
 
   const dateObj = new Date(slot.datetime);
+  const phoneValidation = normalizeSLPhone(contact);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,11 +69,17 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
         setErrorMsg('Please enter your email address.');
         return;
       }
+      if (!patientContact || !phoneValidation.isValid) {
+        setErrorMsg('Please enter a valid Sri Lankan mobile number (e.g. 077 123 4567 or +94 77 123 4567) to receive booking and Jitsi SMS notifications.');
+        return;
+      }
+
+      const formattedContact = phoneValidation.formatted || patientContact;
 
       const res = registerPatient({
         name: patientName,
         email: patientEmail,
-        phone: patientContact,
+        phone: formattedContact,
         district,
         password,
       });
@@ -69,7 +92,7 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
       onAuthSuccess({
         name: patientName,
         email: patientEmail,
-        contact: patientContact,
+        contact: formattedContact,
       });
     } else {
       // Sign In mode
@@ -212,14 +235,28 @@ export const GuestAuthModal: React.FC<GuestAuthModalProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-[#2D3728]/80 block mb-1">Mobile Contact</label>
+                  <label className="font-semibold text-[#2D3728]/80 block mb-1">Mobile Contact (+94 SL)</label>
                   <input
                     type="tel"
+                    required
                     value={contact}
                     onChange={(e) => setContact(e.target.value)}
-                    placeholder="+94 77 123 4567"
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-sm text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+                    placeholder="077 123 4567 or +94 77 123 4567"
+                    className={`w-full px-4 py-2.5 rounded-xl border text-sm text-[#2D3728] focus:outline-none focus:ring-2 ${
+                      phoneValidation.isValid
+                        ? 'border-emerald-500/60 bg-emerald-50/40 focus:ring-emerald-600'
+                        : 'border-[#768c6e]/30 bg-white focus:ring-[#768c6e]'
+                    }`}
                   />
+                  {phoneValidation.isValid ? (
+                    <span className="text-[11px] text-emerald-700 font-medium block mt-1">
+                      ✓ Valid format: {phoneValidation.formatted}
+                    </span>
+                  ) : contact.trim().length > 0 ? (
+                    <span className="text-[11px] text-amber-700 block mt-1">
+                      Enter 10-digit Sri Lankan phone (e.g. 077 123 4567)
+                    </span>
+                  ) : null}
                 </div>
               </div>
 

@@ -1142,7 +1142,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
                     <button
                       disabled={isTestingSms}
                       onClick={async () => {
-                        const target = testSmsRecipient || (bookings[0]?.patientContact || '+94771234567');
+                        const target = testSmsRecipient.trim() || (bookings[0]?.patientContact || '').trim();
+                        if (!target) {
+                          setSmsTestFeedback({
+                            success: false,
+                            message: 'Please enter or select a recipient mobile number (e.g. 077 123 4567 or +94 77 123 4567) to test.',
+                          });
+                          return;
+                        }
                         setIsTestingSms(true);
                         setSmsTestFeedback(null);
                         try {

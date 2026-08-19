@@ -46,7 +46,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     if (body.action === 'test') {
-      const recipient = body.recipient || '94771234567';
+      const recipient = body.recipient;
+      if (!recipient) {
+        return NextResponse.json({ error: 'Please provide a valid recipient phone number.' }, { status: 400 });
+      }
       const res = await smsService.sendSms(
         recipient,
         `PsyNova LK Test: Notify.lk gateway connection verified for ${recipient}. Telehealth SMS notifications active.`
@@ -57,8 +60,11 @@ export async function POST(req: NextRequest) {
         const res = await smsService.send5MinReminder(body.booking);
         return NextResponse.json(res);
       }
+      if (!body.recipient) {
+        return NextResponse.json({ error: 'Missing booking or recipient phone number.' }, { status: 400 });
+      }
       const res = await smsService.sendSms(
-        body.recipient || '94771234567',
+        body.recipient,
         `PsyNova REMINDER: Your Psychiatry Consultation with ${body.doctorName || 'your specialist'} starts in 5 minutes. Join video room: ${body.videoLink || 'https://meet.psynova.lk'}`
       );
       return NextResponse.json(res);
@@ -82,7 +88,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing booking or doctor details' }, { status: 400 });
     }
 
-    const res = await smsService.sendSms(body.recipient || '94771234567', body.message || 'PsyNova Test Notification');
+    if (!body.recipient) {
+      return NextResponse.json({ error: 'Recipient phone number is required' }, { status: 400 });
+    }
+
+    const res = await smsService.sendSms(body.recipient, body.message || 'PsyNova Test Notification');
     return NextResponse.json(res);
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'SMS dispatch failed' }, { status: 400 });

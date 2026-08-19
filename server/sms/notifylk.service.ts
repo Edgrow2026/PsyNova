@@ -45,15 +45,20 @@ export class NotifyLkService {
     };
   }
 
-  formatSriLankaPhone(phone: string): { cleanDigits: string; displayFormat: string } {
-    if (!phone) {
-      return { cleanDigits: '94770000000', displayFormat: '+94 77 000 0000' };
+  formatSriLankaPhone(phone: string): { cleanDigits: string; displayFormat: string; isValid: boolean } {
+    if (!phone || typeof phone !== 'string') {
+      return { cleanDigits: '', displayFormat: '', isValid: false };
     }
     // Strip all non-numeric characters
     let digits = phone.replace(/[^0-9]/g, '');
+    if (!digits) {
+      return { cleanDigits: '', displayFormat: '', isValid: false };
+    }
 
     // Normalize common Sri Lankan phone input variations:
-    if (digits.startsWith('940') && digits.length === 12) {
+    if (digits.startsWith('0094')) {
+      digits = digits.substring(2); // "0094771234567" -> "94771234567"
+    } else if (digits.startsWith('940') && digits.length === 12) {
       // E.g. "+94 077 123 4567" -> "94771234567"
       digits = '94' + digits.substring(3);
     } else if (digits.startsWith('0') && digits.length === 10) {
@@ -62,25 +67,47 @@ export class NotifyLkService {
     } else if (digits.length === 9) {
       // E.g. "771234567" -> "94771234567"
       digits = '94' + digits;
-    } else if (!digits.startsWith('94')) {
+    } else if (!digits.startsWith('94') && digits.length >= 9) {
       digits = '94' + digits;
     }
 
-    const displayFormat = digits.length >= 11
+    const isValid = digits.startsWith('94') && digits.length === 11;
+    const displayFormat = digits.length === 11
       ? `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 7)} ${digits.substring(7)}`
       : `+${digits}`;
 
-    return { cleanDigits: digits, displayFormat };
+    return { cleanDigits: digits, displayFormat, isValid };
   }
 
   async sendSms(
     recipientPhone: string,
     message: string
   ): Promise<{ success: boolean; messageId: string; status: string; log: SmsLog; error?: string }> {
-    const { cleanDigits, displayFormat } = this.formatSriLankaPhone(recipientPhone);
+    const { cleanDigits, displayFormat, isValid } = this.formatSriLankaPhone(recipientPhone);
     const msgId = `NOTIFYLK-${Math.floor(100000 + Math.random() * 900000)}`;
     const timestamp = new Date().toISOString();
     const { userId, apiKey, senderId, apiUrl } = this.getCredentials();
+
+    if (!cleanDigits || cleanDigits.length < 9) {
+      const logEntry: SmsLog = {
+        id: msgId,
+        recipient: recipientPhone || 'EMPTY_NUMBER',
+        formattedRecipient: 'Invalid Number',
+        senderId,
+        message,
+        status: 'FAILED',
+        timestamp,
+        errorNote: `No valid mobile phone number provided ("${recipientPhone || ''}"). Please provide a valid Sri Lankan mobile number (e.g. 077 123 4567 or +94 77 123 4567).`,
+      };
+      this.smsLogs = [logEntry, ...this.smsLogs];
+      return {
+        success: false,
+        messageId: msgId,
+        status: 'FAILED',
+        log: logEntry,
+        error: logEntry.errorNote,
+      };
+    }
 
     console.log(`[Notify.lk] Dispatching SMS to ${cleanDigits} (${displayFormat}) via Sender '${senderId}': "${message}"`);
 
@@ -207,7 +234,11 @@ export class NotifyLkService {
       hour: '2-digit',
       minute: '2-digit',
     });
-    const recipient = booking.patientContact || '+94771234567';
+    const recipient = booking.patientContact;
+    if (!recipient) {
+      console.warn(`[Notify.lk] Missing patient contact on booking ${booking.id}`);
+      return { success: false, error: 'No phone number provided on booking' };
+    }
     const msg = `PsyNova LK: Booking ${booking.id} CONFIRMED! Specialist: ${booking.doctorName}. Date: ${formattedDate}. Fee LKR ${booking.feeLkr.toLocaleString()} paid via PayHere. Join Video Session: ${booking.videoLink || 'https://meet.psynova.lk'}`;
     return this.sendSms(recipient, msg);
   }
@@ -221,7 +252,7 @@ export class NotifyLkService {
       hour: '2-digit',
       minute: '2-digit',
     });
-    const msg = `PsyNova Alert: New consultation booked by ${booking.patientName} for ${formattedDate}. Ref: ${booking.id}. Telehealth link: ${booking.videoLink || 'https://meet.psynova.lk'}`;
+    const msg = `PsyNova Alert: New consultation booked by ${booking.patientName} (${booking.patientContact || 'No phone'}) for ${formattedDate}. Ref: ${booking.id}. Telehealth link: ${booking.videoLink || 'https://meet.psynova.lk'}`;
     return this.sendSms(phone, msg);
   }
 
@@ -230,7 +261,11 @@ export class NotifyLkService {
       hour: '2-digit',
       minute: '2-digit',
     });
-    const recipient = booking.patientContact || '+94771234567';
+    const recipient = booking.patientContact;
+    if (!recipient) {
+      console.warn(`[Notify.lk] Missing patient contact for 5-min reminder on booking ${booking.id}`);
+      return { success: false, error: 'No phone number provided on booking' };
+    }
     const msg = `PsyNova REMINDER: Your Telehealth Consultation with ${booking.doctorName} starts in 5 minutes (${formattedTime}). Click to join video room: ${booking.videoLink || 'https://meet.psynova.lk'}`;
     return this.sendSms(recipient, msg);
   }

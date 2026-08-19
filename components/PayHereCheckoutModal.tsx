@@ -22,45 +22,85 @@ interface PayHereCheckoutModalProps {
   doctor: Psychiatrist | null;
   slot: DoctorSlot | null;
   isOpen: boolean;
+  patientDataOverride?: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
   onClose: () => void;
   onSuccess: (booking: Booking) => void;
 }
+
+const normalizeSLPhone = (phone: string) => {
+  if (!phone || typeof phone !== 'string') return { clean: '', formatted: '', isValid: false };
+  let digits = phone.replace(/[^0-9]/g, '');
+  if (digits.startsWith('0094')) digits = digits.substring(2);
+  else if (digits.startsWith('940') && digits.length === 12) digits = '94' + digits.substring(3);
+  else if (digits.startsWith('0') && digits.length === 10) digits = '94' + digits.substring(1);
+  else if (digits.length === 9) digits = '94' + digits;
+  else if (!digits.startsWith('94') && digits.length >= 9) digits = '94' + digits;
+
+  const isValid = digits.startsWith('94') && digits.length === 11;
+  const formatted = digits.length === 11
+    ? `+${digits.substring(0, 2)} ${digits.substring(2, 4)} ${digits.substring(4, 7)} ${digits.substring(7)}`
+    : digits ? `+${digits}` : '';
+  return { clean: digits, formatted, isValid };
+};
 
 export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
   doctor,
   slot,
   isOpen,
+  patientDataOverride,
   onClose,
   onSuccess,
 }) => {
   const { user, patients, addConfirmedBooking, registerPatient } = usePsyNova();
 
   const activePatientName =
-    user.role === 'patient' && user.name && user.name !== 'Guest Visitor' ? user.name : 'Dilshan Silva';
+    patientDataOverride?.name ||
+    (user.role === 'patient' && user.name && user.name !== 'Guest Visitor' ? user.name : '');
   const activePatientEmail =
-    user.role === 'patient' && user.email && user.email !== 'visitor@psynova.lk'
+    patientDataOverride?.email ||
+    (user.role === 'patient' && user.email && user.email !== 'visitor@psynova.lk'
       ? user.email
-      : 'dilshan.silva@example.lk';
+      : '');
 
   const registeredPatient = patients.find((p) => p.email.toLowerCase() === activePatientEmail.toLowerCase());
-  const defaultContact = registeredPatient?.phone || '+94 77 987 6543';
+  const defaultContact = patientDataOverride?.contact || registeredPatient?.phone || '';
 
   // Patient Info State
   const [patientName, setPatientName] = useState(activePatientName);
   const [patientEmail, setPatientEmail] = useState(activePatientEmail);
   const [patientContact, setPatientContact] = useState(defaultContact);
 
-  // Checkout Mode (defaults to sandbox_terminal for working out-of-the-box flow)
-  const [checkoutMode, setCheckoutMode] = useState<'sandbox_terminal' | 'hosted_redirect'>('sandbox_terminal');
-
-  // Custom Merchant ID/Secret for direct Hosted Redirect testing
-  const [customMerchantId, setCustomMerchantId] = useState('1236791');
-
   // Card Input State for In-App Sandbox Terminal
   const [cardNumber, setCardNumber] = useState('4916 2175 0161 1292');
   const [cardExpiry, setCardExpiry] = useState('12/28');
   const [cardCvv, setCardCvv] = useState('123');
   const [cardholderName, setCardholderName] = useState(activePatientName);
+
+  // Sync state if modal is opened with new patientDataOverride
+  const [prevOverride, setPrevOverride] = useState(patientDataOverride);
+  if (patientDataOverride !== prevOverride) {
+    setPrevOverride(patientDataOverride);
+    if (patientDataOverride?.name) {
+      setPatientName(patientDataOverride.name);
+      setCardholderName(patientDataOverride.name);
+    }
+    if (patientDataOverride?.email) {
+      setPatientEmail(patientDataOverride.email);
+    }
+    if (patientDataOverride?.contact) {
+      setPatientContact(patientDataOverride.contact);
+    }
+  }
+
+  // Checkout Mode (defaults to sandbox_terminal for working out-of-the-box flow)
+  const [checkoutMode, setCheckoutMode] = useState<'sandbox_terminal' | 'hosted_redirect'>('sandbox_terminal');
+
+  // Custom Merchant ID/Secret for direct Hosted Redirect testing
+  const [customMerchantId, setCustomMerchantId] = useState('1236791');
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -72,6 +112,7 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
   if (!isOpen || !doctor || !slot) return null;
 
   const dateObj = new Date(slot.datetime);
+  const phoneValidation = normalizeSLPhone(patientContact);
 
   // Fill Test Cards
   const handleFillTestCard = (type: 'visa' | 'mastercard' | 'invalid') => {
@@ -79,12 +120,12 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
       setCardNumber('4916 2175 0161 1292');
       setCardExpiry('12/28');
       setCardCvv('123');
-      setCardholderName(patientName || 'Dilshan Silva');
+      setCardholderName(patientName || 'Patient');
     } else if (type === 'mastercard') {
       setCardNumber('5307 7321 2553 1191');
       setCardExpiry('10/27');
       setCardCvv('456');
-      setCardholderName(patientName || 'Dilshan Silva');
+      setCardholderName(patientName || 'Patient');
     } else {
       setCardNumber('4000 0000 0000 0002');
       setCardExpiry('01/22');
@@ -98,7 +139,25 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
     setLoading(true);
     setErrorMessage('');
 
+    if (!patientName.trim()) {
+      setErrorMessage('Please enter the patient full name.');
+      setLoading(false);
+      return;
+    }
+    if (!patientEmail.trim()) {
+      setErrorMessage('Please enter the patient email address.');
+      setLoading(false);
+      return;
+    }
+    if (!patientContact.trim() || !phoneValidation.isValid) {
+      setErrorMessage('Please provide a valid Sri Lankan mobile number (e.g. 077 123 4567 or +94 77 123 4567) so we can dispatch your booking confirmation and Jitsi link via SMS.');
+      setLoading(false);
+      return;
+    }
+
     try {
+      const formattedPhone = phoneValidation.formatted || patientContact.trim();
+
       // 1. Create pending booking record first
       const bookingRes = await fetch('/api/bookings', {
         method: 'POST',
@@ -109,9 +168,9 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
           doctorId: doctor.id,
           slotId: slot.id,
           slotDatetime: slot.datetime,
-          patientName,
-          patientEmail,
-          patientContact,
+          patientName: patientName.trim(),
+          patientEmail: patientEmail.trim(),
+          patientContact: formattedPhone,
         }),
       });
 
@@ -137,24 +196,30 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
         throw new Error(data.error || `PayHere Payment Declined (Status code: ${statusCode})`);
       }
 
+      // Ensure confirmed booking uses exact patientContact
+      const confirmedBooking: Booking = {
+        ...data.booking,
+        patientContact: formattedPhone,
+      };
+
       // Sync confirmed booking into local state store and update doctor slot
-      addConfirmedBooking(data.booking);
+      addConfirmedBooking(confirmedBooking);
 
       // Register or link patient account
       registerPatient({
-        name: patientName,
-        email: patientEmail,
-        phone: patientContact,
+        name: patientName.trim(),
+        email: patientEmail.trim(),
+        phone: formattedPhone,
       });
 
       // Also ensure client-triggered SMS confirmation fires if server SMS had any network delay
       fetch('/api/sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'booking-confirmation', booking: data.booking }),
+        body: JSON.stringify({ action: 'booking-confirmation', booking: confirmedBooking }),
       }).catch((err) => console.warn('Secondary SMS confirmation trigger:', err));
 
-      onSuccess(data.booking);
+      onSuccess(confirmedBooking);
       onClose();
     } catch (err: any) {
       setErrorMessage(err.message || 'Payment processing failed on PayHere gateway');
@@ -169,7 +234,25 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
     setErrorMessage('');
     setLoading(true);
 
+    if (!patientName.trim()) {
+      setErrorMessage('Please enter the patient full name.');
+      setLoading(false);
+      return;
+    }
+    if (!patientEmail.trim()) {
+      setErrorMessage('Please enter the patient email address.');
+      setLoading(false);
+      return;
+    }
+    if (!patientContact.trim() || !phoneValidation.isValid) {
+      setErrorMessage('Please provide a valid Sri Lankan mobile number (e.g. 077 123 4567 or +94 77 123 4567) so we can dispatch your booking confirmation and Jitsi link via SMS.');
+      setLoading(false);
+      return;
+    }
+
     try {
+      const formattedPhone = phoneValidation.formatted || patientContact.trim();
+
       // 1. Create pending booking
       const bookingRes = await fetch('/api/bookings', {
         method: 'POST',
@@ -180,9 +263,9 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
           doctorId: doctor.id,
           slotId: slot.id,
           slotDatetime: slot.datetime,
-          patientName,
-          patientEmail,
-          patientContact,
+          patientName: patientName.trim(),
+          patientEmail: patientEmail.trim(),
+          patientContact: formattedPhone,
         }),
       });
 
@@ -208,8 +291,8 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
           items: `Psychiatry Consultation - ${doctor.name}`,
           firstName,
           lastName,
-          email: patientEmail,
-          phone: patientContact,
+          email: patientEmail.trim(),
+          phone: formattedPhone,
         }),
       });
 
@@ -361,6 +444,7 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
                   <input
                     type="text"
                     required
+                    placeholder="e.g. Kasun Fernando"
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
                     className="w-full px-3.5 py-2 rounded-xl border border-[#768c6e]/30 bg-[#F7F5EF]/50 text-xs text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
@@ -373,21 +457,51 @@ export const PayHereCheckoutModal: React.FC<PayHereCheckoutModalProps> = ({
                     <input
                       type="email"
                       required
+                      placeholder="e.g. kasun@example.lk"
                       value={patientEmail}
                       onChange={(e) => setPatientEmail(e.target.value)}
                       className="w-full px-3.5 py-2 rounded-xl border border-[#768c6e]/30 bg-[#F7F5EF]/50 text-xs text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-[#2D3728]/80 block mb-1">Mobile (+94 Notify.lk)</label>
+                    <label className="text-xs font-semibold text-[#2D3728]/80 block mb-1">
+                      Mobile Number (for SMS Alerts)
+                    </label>
                     <input
                       type="tel"
                       required
+                      placeholder="e.g. 077 123 4567 or +94 77 123 4567"
                       value={patientContact}
                       onChange={(e) => setPatientContact(e.target.value)}
-                      className="w-full px-3.5 py-2 rounded-xl border border-[#768c6e]/30 bg-[#F7F5EF]/50 text-xs text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+                      className={`w-full px-3.5 py-2 rounded-xl border text-xs text-[#2D3728] focus:outline-none focus:ring-2 ${
+                        phoneValidation.isValid
+                          ? 'border-emerald-500/50 bg-emerald-50/40 focus:ring-emerald-600'
+                          : 'border-[#768c6e]/30 bg-[#F7F5EF]/50 focus:ring-[#768c6e]'
+                      }`}
                     />
                   </div>
+                </div>
+
+                {/* Live SMS Recipient Indicator */}
+                <div className="pt-0.5">
+                  {phoneValidation.isValid ? (
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>
+                        Notify.lk SMS will be dispatched directly to: <strong className="font-mono text-emerald-950 font-bold">{phoneValidation.formatted}</strong>
+                      </span>
+                    </div>
+                  ) : patientContact.trim().length > 0 ? (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-medium flex items-center gap-2">
+                      <Smartphone className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>Enter full Sri Lankan mobile number (e.g. 077 123 4567 or +94 77 123 4567)</span>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-[#2D3728]/60 italic flex items-center gap-1.5">
+                      <Smartphone className="w-3 h-3 text-[#768c6e]" />
+                      SMS confirmation & 5-minute pre-session reminders will be sent to the phone number entered above.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
