@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getNestServices } from '../../../server/nest-app';
 import { validateEmail, validatePassword } from '../../../lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { databaseService } = await getNestServices();

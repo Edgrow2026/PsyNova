@@ -49,6 +49,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
     boostPsychiatrist,
     unboostPsychiatrist,
     flagReview,
+    unflagReview,
+    deleteReview,
     resolveComplaint,
     markPayoutPaid,
     cancelBooking,
@@ -59,7 +61,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
   const [currentSubTab, setCurrentSubTab] = useState<string>(activeSubTab);
   const [selectedPatientFilter, setSelectedPatientFilter] = useState<string>('');
   const [patientSearchQuery, setPatientSearchQuery] = useState<string>('');
+  const [patientDistrictFilter, setPatientDistrictFilter] = useState<string>('all');
   const [bookingSearchQuery, setBookingSearchQuery] = useState<string>('');
+  
+  // Review audit states
+  const [reviewSearchQuery, setReviewSearchQuery] = useState<string>('');
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'flagged' | '5' | '4' | '3_and_below'>('all');
+  const [flaggingReviewId, setFlaggingReviewId] = useState<string | null>(null);
+  const [flaggingNote, setFlaggingNote] = useState<string>('');
+
+  // Complaint queue states
+  const [complaintSearchQuery, setComplaintSearchQuery] = useState<string>('');
+  const [complaintFilter, setComplaintFilter] = useState<'all' | 'Pending' | 'Resolved'>('all');
+
   const [testSmsRecipient, setTestSmsRecipient] = useState<string>('');
   const [smsGatewayInfo, setSmsGatewayInfo] = useState<{
     gateway: string;
@@ -129,12 +143,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
     { id: 'settings', label: 'Platform Settings', icon: Settings },
   ];
 
-  // Financial Stats
+  // Financial & Queue Stats
   const totalBookings = bookings.length;
   const totalGrossRevenue = bookings.reduce((sum, b) => sum + b.feeLkr, 0);
   const totalPlatformCommission = bookings.reduce((sum, b) => sum + b.platformCommissionLkr, 0);
   const pendingApprovalsCount = psychiatrists.filter((d) => d.status === 'pending').length;
   const boostedCount = psychiatrists.filter((d) => d.isBoosted).length;
+  const flaggedReviewsCount = reviews.filter((r) => r.flagged).length;
+  const pendingComplaintsCount = complaints.filter((c) => c.status === 'Pending').length;
 
   const handleBoostToggle = (docId: string, isCurrentlyBoosted: boolean) => {
     if (isCurrentlyBoosted) {
@@ -153,6 +169,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
     resolveComplaint(solvingComplaintId, 'Ref_Proof_Uploaded_PayHere.pdf', proofNote);
     setSolvingComplaintId(null);
     setProofNote('');
+  };
+
+  const handleFlagSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!flaggingReviewId) return;
+    flagReview(flaggingReviewId, flaggingNote || 'Flagged by administrator for compliance audit');
+    setFlaggingReviewId(null);
+    setFlaggingNote('');
   };
 
   return (
@@ -203,9 +227,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
             >
               <Icon className="w-3.5 h-3.5" />
               {link.label}
+              {link.id === 'users' && (
+                <span className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] ${isActive ? 'bg-white/30 text-white' : 'bg-[#768c6e]/20 text-[#2D3728]'}`}>
+                  {patients.length}
+                </span>
+              )}
               {link.id === 'psychiatrists' && pendingApprovalsCount > 0 && (
                 <span className="w-5 h-5 rounded-full bg-amber-500 text-white font-bold text-[10px] flex items-center justify-center">
                   {pendingApprovalsCount}
+                </span>
+              )}
+              {link.id === 'reviews' && flaggedReviewsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white font-bold text-[10px]">
+                  {flaggedReviewsCount} flagged
+                </span>
+              )}
+              {link.id === 'complaints' && pendingComplaintsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white font-bold text-[10px]">
+                  {pendingComplaintsCount} pending
                 </span>
               )}
             </button>
@@ -413,28 +452,281 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
       {/* SUB-PAGE 3: REVIEWS AUDIT */}
       {currentSubTab === 'reviews' && (
         <div className="space-y-6">
-          <h2 className="text-xl font-bold text-[#2D3728]">Reviews Audit & Moderation</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-[#2D3728] flex items-center gap-2">
+                <Star className="w-5 h-5 text-[#768c6e]" /> Reviews Audit & Moderation Queue
+              </h2>
+              <p className="text-xs text-[#2D3728]/70">
+                Audit SLMC specialist feedback, review patient ratings, and moderate flagged reviews with administrative notes.
+              </p>
+            </div>
+          </div>
+
+          {/* Review Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="psynova-card p-4 space-y-1">
+              <span className="text-[11px] font-semibold text-[#6B7D5E] uppercase tracking-wider">Total Reviews</span>
+              <p className="text-2xl font-extrabold text-[#2D3728] font-mono">{reviews.length}</p>
+              <span className="text-[11px] text-[#2D3728]/60">Verified patient consultations</span>
+            </div>
+            <div className="psynova-card p-4 space-y-1">
+              <span className="text-[11px] font-semibold text-[#6B7D5E] uppercase tracking-wider">Flagged for Audit</span>
+              <p className={`text-2xl font-extrabold font-mono ${flaggedReviewsCount > 0 ? 'text-red-600' : 'text-[#6B7D5E]'}`}>
+                {flaggedReviewsCount}
+              </p>
+              <span className="text-[11px] text-[#2D3728]/60">Requires compliance moderation</span>
+            </div>
+            <div className="psynova-card p-4 space-y-1">
+              <span className="text-[11px] font-semibold text-[#6B7D5E] uppercase tracking-wider">Average Rating</span>
+              <p className="text-2xl font-extrabold text-amber-700 font-mono">
+                {reviews.length > 0
+                  ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+                  : '0.0'}{' '}
+                ★
+              </p>
+              <span className="text-[11px] text-[#2D3728]/60">Across all SLMC practitioners</span>
+            </div>
+          </div>
+
+          {/* Search & Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3.5 top-3 text-[#2D3728]/40" />
+              <input
+                type="text"
+                placeholder="Search reviews by doctor name, patient name, or review content..."
+                value={reviewSearchQuery}
+                onChange={(e) => setReviewSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              <button
+                onClick={() => setReviewFilter('all')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                  reviewFilter === 'all'
+                    ? 'bg-[#768c6e] text-white shadow-sm'
+                    : 'bg-[#F7F5EF] text-[#2D3728]/70 hover:bg-[#768c6e]/15'
+                }`}
+              >
+                All ({reviews.length})
+              </button>
+              <button
+                onClick={() => setReviewFilter('flagged')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                  reviewFilter === 'flagged'
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'bg-[#F7F5EF] text-red-700 hover:bg-red-50'
+                }`}
+              >
+                Flagged ({flaggedReviewsCount})
+              </button>
+              <button
+                onClick={() => setReviewFilter('5')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                  reviewFilter === '5'
+                    ? 'bg-[#768c6e] text-white shadow-sm'
+                    : 'bg-[#F7F5EF] text-[#2D3728]/70 hover:bg-[#768c6e]/15'
+                }`}
+              >
+                5 Stars
+              </button>
+              <button
+                onClick={() => setReviewFilter('4')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                  reviewFilter === '4'
+                    ? 'bg-[#768c6e] text-white shadow-sm'
+                    : 'bg-[#F7F5EF] text-[#2D3728]/70 hover:bg-[#768c6e]/15'
+                }`}
+              >
+                4 Stars
+              </button>
+              <button
+                onClick={() => setReviewFilter('3_and_below')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                  reviewFilter === '3_and_below'
+                    ? 'bg-[#768c6e] text-white shadow-sm'
+                    : 'bg-[#F7F5EF] text-[#2D3728]/70 hover:bg-[#768c6e]/15'
+                }`}
+              >
+                ≤ 3 Stars
+              </button>
+            </div>
+          </div>
+
+          {/* Reviews List */}
           <div className="space-y-3">
-            {reviews.map((rev) => (
-              <div key={rev.id} className="p-4 rounded-2xl bg-[#F7F5EF] border border-[#768c6e]/20 space-y-2 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-[#2D3728]">{rev.patientName} → {rev.doctorName}</span>
-                  <span className="text-amber-700 font-bold">{rev.rating} ★</span>
+            {(() => {
+              const query = reviewSearchQuery.toLowerCase().trim();
+              const filteredReviews = reviews.filter((r) => {
+                const matchesQuery =
+                  !query ||
+                  r.patientName.toLowerCase().includes(query) ||
+                  r.doctorName.toLowerCase().includes(query) ||
+                  r.text.toLowerCase().includes(query) ||
+                  (r.patientDistrict && r.patientDistrict.toLowerCase().includes(query));
+
+                let matchesFilter = true;
+                if (reviewFilter === 'flagged') matchesFilter = !!r.flagged;
+                else if (reviewFilter === '5') matchesFilter = r.rating === 5;
+                else if (reviewFilter === '4') matchesFilter = r.rating === 4;
+                else if (reviewFilter === '3_and_below') matchesFilter = r.rating <= 3;
+
+                return matchesQuery && matchesFilter;
+              });
+
+              if (filteredReviews.length === 0) {
+                return (
+                  <div className="p-8 text-center bg-[#F7F5EF] rounded-2xl border border-[#768c6e]/20 space-y-2">
+                    <p className="text-sm font-semibold text-[#2D3728]">No reviews matching criteria.</p>
+                    <p className="text-xs text-[#2D3728]/60">Try clearing filters or search terms.</p>
+                  </div>
+                );
+              }
+
+              return filteredReviews.map((rev) => (
+                <div
+                  key={rev.id}
+                  className={`p-5 rounded-2xl bg-[#F7F5EF] border transition-all text-xs space-y-3 ${
+                    rev.flagged
+                      ? 'border-red-400 bg-red-50/40 shadow-sm'
+                      : 'border-[#768c6e]/20 hover:border-[#768c6e]/40'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-[#2D3728]">{rev.patientName}</span>
+                      <span className="text-[#2D3728]/60">→</span>
+                      <span className="font-semibold text-[#6B7D5E]">{rev.doctorName}</span>
+                      {rev.patientDistrict && (
+                        <span className="text-[10px] bg-[#768c6e]/15 px-2 py-0.5 rounded text-[#2D3728]">
+                          {rev.patientDistrict}
+                        </span>
+                      )}
+                      {rev.isVerified && (
+                        <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Verified Session
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg text-amber-800 font-bold">
+                        <span>{rev.rating}</span>
+                        <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                      </div>
+                      <span className="text-[11px] text-[#2D3728]/50">{rev.date}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[#2D3728]/90 text-xs sm:text-sm italic leading-relaxed bg-white/60 p-3 rounded-xl border border-[#768c6e]/15">
+                    &ldquo;{rev.text}&rdquo;
+                  </p>
+
+                  {rev.flagged && (
+                    <div className="p-3 rounded-xl bg-red-100/70 border border-red-300 text-red-900 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <span className="font-bold">Flagged for Compliance Review</span>
+                        <p className="text-[11px] text-red-800">
+                          {rev.adminNote || 'Administrator marked this review for audit verification.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-1 border-t border-[#768c6e]/10">
+                    <span className="text-[11px] text-[#2D3728]/60">
+                      Helpful votes: <strong>{rev.helpfulCount || 0}</strong>
+                    </span>
+
+                    <div className="flex items-center gap-2">
+                      {rev.flagged ? (
+                        <button
+                          onClick={() => unflagReview(rev.id)}
+                          className="btn-secondary py-1 px-3 text-[11px] text-emerald-800 border-emerald-600/40 hover:bg-emerald-50 flex items-center gap-1"
+                        >
+                          <CheckCircle2 className="w-3 h-3" /> Approve & Clear Flag
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setFlaggingReviewId(rev.id);
+                            setFlaggingNote('');
+                          }}
+                          className="btn-outline py-1 px-3 text-[11px] text-red-700 border-red-300 hover:bg-red-50 flex items-center gap-1"
+                        >
+                          <AlertTriangle className="w-3 h-3" /> Flag Review
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          if (confirm('Are you sure you want to permanently delete this review?')) {
+                            deleteReview(rev.id);
+                          }
+                        }}
+                        className="p-1.5 rounded-lg text-[#2D3728]/50 hover:text-red-700 hover:bg-red-50 transition-colors"
+                        title="Delete Review"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-[#2D3728]/85">{rev.text}</p>
-                {rev.flagged && (
-                  <p className="text-red-600 font-semibold">Flagged for review: {rev.adminNote}</p>
-                )}
-                <div className="flex justify-end pt-2">
-                  <button
-                    onClick={() => flagReview(rev.id, 'Admin flagged for audit')}
-                    className="btn-destructive text-[11px] py-1 px-3"
-                  >
-                    Flag Review
-                  </button>
-                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Flag Review */}
+      {flaggingReviewId && (
+        <div
+          onClick={() => setFlaggingReviewId(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2D3728]/60 backdrop-blur-md animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-[#F7F5EF] rounded-[24px] p-6 shadow-2xl space-y-4 animate-scale-up border border-[#768c6e]/30"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg text-[#2D3728] flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-600" /> Flag Review for Audit
+              </h3>
+              <button
+                onClick={() => setFlaggingReviewId(null)}
+                className="p-1 rounded-full hover:bg-[#768c6e]/10 text-[#2D3728]/70"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleFlagSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold block mb-1 text-[#2D3728]">Audit / Moderation Note</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={flaggingNote}
+                  onChange={(e) => setFlaggingNote(e.target.value)}
+                  placeholder="e.g. Contains potential SLMC regulatory dispute or personal sensitive details."
+                  className="w-full px-3 py-2 rounded-xl border border-[#768c6e]/30 bg-white text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+                />
               </div>
-            ))}
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setFlaggingReviewId(null)}
+                  className="btn-outline py-2 px-4 text-xs"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-destructive py-2 px-4 text-xs font-semibold">
+                  Confirm & Flag Review
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -442,41 +734,181 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
       {/* SUB-PAGE 4: COMPLAINTS QUEUE */}
       {currentSubTab === 'complaints' && (
         <div className="space-y-6">
-          <h2 className="text-xl font-bold text-[#2D3728]">Complaints & Refund Resolutions Queue</h2>
-          <div className="space-y-3">
-            {complaints.map((c) => (
-              <div key={c.id} className="p-5 rounded-2xl bg-[#F7F5EF] border border-[#768c6e]/20 space-y-3 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-sm text-[#2D3728]">{c.id} • {c.reason}</span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full font-semibold ${
-                      c.status === 'Resolved'
-                        ? 'bg-emerald-500/15 text-emerald-800'
-                        : 'bg-amber-500/15 text-amber-800'
-                    }`}
-                  >
-                    {c.status}
-                  </span>
-                </div>
-                <p className="text-[#2D3728]/80">{c.details}</p>
-                <div className="text-[11px] text-[#2D3728]/60 font-mono">
-                  Patient: {c.patientName} | Doctor: {c.doctorName} | Booking: {c.bookingId}
-                </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-[#2D3728] flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-[#768c6e]" /> Complaints & Refund Resolutions Queue
+              </h2>
+              <p className="text-xs text-[#2D3728]/70">
+                Manage dispute escalations, process LKR telehealth refunds, and record resolution compliance proofs.
+              </p>
+            </div>
+          </div>
 
-                {c.status === 'Pending' ? (
-                  <button
-                    onClick={() => setSolvingComplaintId(c.id)}
-                    className="btn-primary text-xs py-1.5 px-4"
-                  >
-                    Solve Issue & Upload Proof
-                  </button>
-                ) : (
-                  <div className="p-2 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200">
-                    <strong>Resolved:</strong> {c.resolutionNote} (Proof: {c.resolutionProof})
+          {/* Complaints Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="psynova-card p-4 space-y-1">
+              <span className="text-[11px] font-semibold text-[#6B7D5E] uppercase tracking-wider">Total Cases</span>
+              <p className="text-2xl font-extrabold text-[#2D3728] font-mono">{complaints.length}</p>
+              <span className="text-[11px] text-[#2D3728]/60">All logged dispute filings</span>
+            </div>
+            <div className="psynova-card p-4 space-y-1">
+              <span className="text-[11px] font-semibold text-[#6B7D5E] uppercase tracking-wider">Pending Action</span>
+              <p className={`text-2xl font-extrabold font-mono ${pendingComplaintsCount > 0 ? 'text-amber-800' : 'text-[#6B7D5E]'}`}>
+                {pendingComplaintsCount}
+              </p>
+              <span className="text-[11px] text-[#2D3728]/60">Awaiting refund or resolution proof</span>
+            </div>
+            <div className="psynova-card p-4 space-y-1">
+              <span className="text-[11px] font-semibold text-[#6B7D5E] uppercase tracking-wider">Resolved Cases</span>
+              <p className="text-2xl font-extrabold text-emerald-800 font-mono">
+                {complaints.filter((c) => c.status === 'Resolved').length}
+              </p>
+              <span className="text-[11px] text-[#2D3728]/60">Documented with resolution proof</span>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3.5 top-3 text-[#2D3728]/40" />
+              <input
+                type="text"
+                placeholder="Search complaints by case ID, reason, patient, doctor or booking ref..."
+                value={complaintSearchQuery}
+                onChange={(e) => setComplaintSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              <button
+                onClick={() => setComplaintFilter('all')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                  complaintFilter === 'all'
+                    ? 'bg-[#768c6e] text-white shadow-sm'
+                    : 'bg-[#F7F5EF] text-[#2D3728]/70 hover:bg-[#768c6e]/15'
+                }`}
+              >
+                All Cases ({complaints.length})
+              </button>
+              <button
+                onClick={() => setComplaintFilter('Pending')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                  complaintFilter === 'Pending'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'bg-[#F7F5EF] text-amber-800 hover:bg-amber-50'
+                }`}
+              >
+                Pending Action ({pendingComplaintsCount})
+              </button>
+              <button
+                onClick={() => setComplaintFilter('Resolved')}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                  complaintFilter === 'Resolved'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-[#F7F5EF] text-emerald-800 hover:bg-emerald-50'
+                }`}
+              >
+                Resolved ({complaints.filter((c) => c.status === 'Resolved').length})
+              </button>
+            </div>
+          </div>
+
+          {/* Complaints List */}
+          <div className="space-y-3">
+            {(() => {
+              const query = complaintSearchQuery.toLowerCase().trim();
+              const filteredComplaints = complaints.filter((c) => {
+                const matchesQuery =
+                  !query ||
+                  c.id.toLowerCase().includes(query) ||
+                  c.reason.toLowerCase().includes(query) ||
+                  c.details.toLowerCase().includes(query) ||
+                  c.patientName.toLowerCase().includes(query) ||
+                  c.doctorName.toLowerCase().includes(query) ||
+                  c.bookingId.toLowerCase().includes(query);
+
+                const matchesFilter = complaintFilter === 'all' || c.status === complaintFilter;
+                return matchesQuery && matchesFilter;
+              });
+
+              if (filteredComplaints.length === 0) {
+                return (
+                  <div className="p-8 text-center bg-[#F7F5EF] rounded-2xl border border-[#768c6e]/20 space-y-2">
+                    <p className="text-sm font-semibold text-[#2D3728]">No complaints found in this queue view.</p>
+                    <p className="text-xs text-[#2D3728]/60">All tele-consultation sessions are running smoothly.</p>
                   </div>
-                )}
-              </div>
-            ))}
+                );
+              }
+
+              return filteredComplaints.map((c) => (
+                <div
+                  key={c.id}
+                  className={`p-5 rounded-2xl bg-[#F7F5EF] border transition-all text-xs space-y-3 ${
+                    c.status === 'Pending'
+                      ? 'border-amber-400/80 bg-amber-50/30 shadow-sm'
+                      : 'border-[#768c6e]/20'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-sm text-[#2D3728]">{c.id}</span>
+                      <span className="font-semibold text-sm text-[#2D3728]">• {c.reason}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full font-semibold ${
+                          c.status === 'Resolved'
+                            ? 'bg-emerald-500/15 text-emerald-800 border border-emerald-500/30'
+                            : 'bg-amber-500/15 text-amber-800 border border-amber-500/30'
+                        }`}
+                      >
+                        {c.status}
+                      </span>
+                      <span className="text-[11px] text-[#2D3728]/50">
+                        {new Date(c.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-[#2D3728]/90 text-xs sm:text-sm bg-white/60 p-3 rounded-xl border border-[#768c6e]/15 leading-relaxed">
+                    {c.details}
+                  </p>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#2D3728]/70 font-mono bg-[#768c6e]/10 p-2.5 rounded-xl border border-[#768c6e]/15">
+                    <span>Patient: <strong className="text-[#2D3728]">{c.patientName}</strong></span>
+                    <span>Doctor: <strong className="text-[#2D3728]">{c.doctorName}</strong></span>
+                    <span>Booking: <strong className="text-[#6B7D5E]">{c.bookingId}</strong></span>
+                  </div>
+
+                  {c.status === 'Pending' ? (
+                    <div className="flex items-center justify-end pt-1">
+                      <button
+                        onClick={() => setSolvingComplaintId(c.id)}
+                        className="btn-primary text-xs py-2 px-4 shadow-sm flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Solve Issue & Upload Proof
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-emerald-950">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700" /> Resolved & Documented
+                      </div>
+                      <p className="text-[11px] text-emerald-800">
+                        {c.resolutionNote || 'Resolved via standard administration protocol.'}
+                      </p>
+                      {c.resolutionProof && (
+                        <p className="text-[10px] font-mono text-emerald-700">
+                          Proof Document: <u>{c.resolutionProof}</u>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ));
+            })()}
           </div>
         </div>
       )}
@@ -489,10 +921,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-[#F7F5EF] rounded-[24px] p-6 shadow-2xl space-y-4 animate-scale-up"
+            className="w-full max-w-md bg-[#F7F5EF] rounded-[24px] p-6 shadow-2xl space-y-4 animate-scale-up border border-[#768c6e]/30"
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg text-[#2D3728]">Solve Issue & Attach Resolution Proof</h3>
+              <h3 className="font-bold text-lg text-[#2D3728] flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-700" /> Solve Complaint & Record Proof
+              </h3>
               <button
                 onClick={() => setSolvingComplaintId(null)}
                 className="p-1 rounded-full hover:bg-[#768c6e]/10 text-[#2D3728]/70"
@@ -502,19 +936,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
             </div>
             <form onSubmit={handleSolveComplaintSubmit} className="space-y-3 text-xs">
               <div>
-                <label className="font-semibold block mb-1">Resolution Protocol Notes</label>
+                <label className="font-semibold block mb-1 text-[#2D3728]">Resolution Protocol Notes</label>
                 <textarea
                   required
                   rows={3}
                   value={proofNote}
                   onChange={(e) => setProofNote(e.target.value)}
-                  placeholder="e.g. Issue resolved via full LKR refund to patient bank account."
-                  className="w-full px-3 py-2 rounded-xl border border-[#768c6e]/30 bg-white"
+                  placeholder="e.g. Full refund of LKR 6,500 disbursed to patient bank account via PayHere gateway reference #PH-9821."
+                  className="w-full px-3 py-2 rounded-xl border border-[#768c6e]/30 bg-white text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
                 />
               </div>
-              <button type="submit" className="btn-primary w-full py-2.5">
-                Mark Issue Resolved
-              </button>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSolvingComplaintId(null)}
+                  className="btn-outline py-2 px-4 text-xs"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary py-2 px-4 text-xs font-semibold shadow-md">
+                  Mark Resolved & File Proof
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -898,48 +1341,98 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
                 <Users className="w-5 h-5 text-[#768c6e]" /> Registered Patient Accounts ({patients.length})
               </h2>
               <p className="text-xs text-[#2D3728]/70">
-                All patient profiles registered on PsyNova, including active account statuses and booking metrics.
+                All client profiles registered on PsyNova, with Sri Lankan district location, mobile contact, and full booking history.
               </p>
             </div>
           </div>
 
-          {/* Search bar */}
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3.5 top-3 text-[#2D3728]/40" />
-            <input
-              type="text"
-              placeholder="Search patients by name, email, mobile, client ID or district..."
-              value={patientSearchQuery}
-              onChange={(e) => setPatientSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
-            />
+          {/* Patient Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="psynova-card p-4 space-y-1">
+              <span className="text-[11px] font-semibold text-[#6B7D5E] uppercase tracking-wider">Total Patients</span>
+              <p className="text-2xl font-extrabold text-[#2D3728] font-mono">{patients.length}</p>
+              <span className="text-[11px] text-[#2D3728]/60">Verified account registrations</span>
+            </div>
+            <div className="psynova-card p-4 space-y-1">
+              <span className="text-[11px] font-semibold text-[#6B7D5E] uppercase tracking-wider">Active Status</span>
+              <p className="text-2xl font-extrabold text-emerald-800 font-mono">
+                {patients.filter((p) => p.status === 'Active').length}
+              </p>
+              <span className="text-[11px] text-[#2D3728]/60">Eligible for tele-health sessions</span>
+            </div>
+            <div className="psynova-card p-4 space-y-1">
+              <span className="text-[11px] font-semibold text-[#6B7D5E] uppercase tracking-wider">Districts Represented</span>
+              <p className="text-2xl font-extrabold text-[#768c6e] font-mono">
+                {new Set(patients.map((p) => p.district).filter(Boolean)).size}
+              </p>
+              <span className="text-[11px] text-[#2D3728]/60">Across Western, Central & island-wide</span>
+            </div>
+          </div>
+
+          {/* Search & District Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3.5 top-3 text-[#2D3728]/40" />
+              <input
+                type="text"
+                placeholder="Search patients by name, email, mobile, client ID or district..."
+                value={patientSearchQuery}
+                onChange={(e) => setPatientSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#2D3728]/70 whitespace-nowrap">District:</span>
+              <select
+                value={patientDistrictFilter}
+                onChange={(e) => setPatientDistrictFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-[#768c6e]/30 bg-white text-xs text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+              >
+                <option value="all">All Districts</option>
+                {Array.from(new Set(patients.map((p) => p.district).filter(Boolean)))
+                  .sort()
+                  .map((dist) => (
+                    <option key={dist} value={dist}>
+                      {dist}
+                    </option>
+                  ))}
+              </select>
+            </div>
           </div>
 
           {/* Patients List Grid */}
           <div className="space-y-3">
             {(() => {
               const query = patientSearchQuery.toLowerCase().trim();
-              const filteredPatients = patients.filter(
-                (p) =>
+              const filteredPatients = patients.filter((p) => {
+                const matchesQuery =
                   !query ||
                   p.name.toLowerCase().includes(query) ||
                   p.email.toLowerCase().includes(query) ||
                   p.phone.includes(query) ||
                   p.clientId.toLowerCase().includes(query) ||
-                  p.district.toLowerCase().includes(query)
-              );
+                  p.district.toLowerCase().includes(query);
+
+                const matchesDistrict =
+                  patientDistrictFilter === 'all' || p.district.toLowerCase() === patientDistrictFilter.toLowerCase();
+
+                return matchesQuery && matchesDistrict;
+              });
 
               if (filteredPatients.length === 0) {
                 return (
                   <div className="p-8 text-center bg-[#F7F5EF] rounded-2xl border border-[#768c6e]/20 space-y-2">
                     <p className="text-sm font-semibold text-[#2D3728]">No patient accounts found.</p>
+                    <p className="text-xs text-[#2D3728]/60">Try adjusting your search criteria or district filter.</p>
                   </div>
                 );
               }
 
               return filteredPatients.map((pat) => {
                 const patientBookings = bookings.filter(
-                  (b) => b.patientEmail.toLowerCase() === pat.email.toLowerCase() || b.patientName.toLowerCase() === pat.name.toLowerCase()
+                  (b) =>
+                    b.patientEmail.toLowerCase() === pat.email.toLowerCase() ||
+                    b.patientName.toLowerCase() === pat.name.toLowerCase()
                 );
 
                 return (
@@ -947,30 +1440,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
                     key={pat.id}
                     className="p-5 rounded-2xl bg-[#F7F5EF] border border-[#768c6e]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:border-[#768c6e]/40 transition-all shadow-sm"
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-bold text-sm text-[#2D3728]">{pat.name}</span>
-                        <span className="font-mono text-[11px] bg-[#768c6e]/20 px-2 py-0.5 rounded text-[#2D3728]">
+                        <span className="font-mono text-[11px] bg-[#768c6e]/20 px-2 py-0.5 rounded text-[#2D3728] font-bold">
                           {pat.clientId}
                         </span>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
                           {pat.status}
+                        </span>
+                        <span className="text-[10px] bg-white border border-[#768c6e]/20 px-2 py-0.5 rounded-full text-[#6B7D5E] font-medium">
+                          Joined {new Date(pat.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                       <p className="text-[#2D3728]/80 flex flex-wrap items-center gap-3">
                         <span className="flex items-center gap-1">
                           <Mail className="w-3 h-3 text-[#768c6e]" /> {pat.email}
                         </span>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 font-mono">
                           <Phone className="w-3 h-3 text-[#768c6e]" /> {pat.phone}
                         </span>
-                        <span>District: <strong>{pat.district}</strong></span>
+                        <span className="bg-[#768c6e]/10 px-2 py-0.5 rounded">
+                          District: <strong>{pat.district || 'Not specified'}</strong>
+                        </span>
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 self-end sm:self-center">
                       <div className="text-right">
-                        <p className="text-[10px] font-semibold text-[#6B7D5E] uppercase">Total Bookings</p>
+                        <p className="text-[10px] font-semibold text-[#6B7D5E] uppercase">Total Consultations</p>
                         <p className="text-base font-extrabold text-[#2D3728] font-mono">{patientBookings.length}</p>
                       </div>
 

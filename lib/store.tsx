@@ -65,6 +65,8 @@ interface PsyNovaContextType {
   addReview: (doctorId: string, rating: number, text: string) => void;
   voteHelpfulReview: (reviewId: string) => void;
   flagReview: (reviewId: string, note?: string) => void;
+  unflagReview: (reviewId: string) => void;
+  deleteReview: (reviewId: string) => void;
 
   // Complaint actions
   addComplaint: (bookingId: string, reason: string, details: string) => void;
@@ -106,20 +108,27 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, error: emailVal.error };
     }
 
-    // Password validation
+    // Password validation (if provided)
     if (patientData.password) {
       const passVal = validatePassword(patientData.password);
       if (!passVal.isValid) {
         return { success: false, error: passVal.error };
       }
-    } else {
-      return { success: false, error: 'Password is required for registration.' };
     }
 
     const cleanEmail = patientData.email.trim().toLowerCase();
-    const existing = patients.find((p) => p.email.toLowerCase() === cleanEmail);
-    if (existing) {
-      return { success: false, error: 'An account with this email address is already registered. Please Sign In instead.' };
+    const existingIndex = patients.findIndex((p) => p.email.toLowerCase() === cleanEmail);
+    if (existingIndex >= 0) {
+      const existing = patients[existingIndex];
+      const updatedPatient: PatientAccount = {
+        ...existing,
+        name: patientData.name || existing.name,
+        phone: patientData.phone || existing.phone,
+        district: patientData.district || existing.district,
+        password: patientData.password || existing.password,
+      };
+      setPatients((prev) => prev.map((p, idx) => (idx === existingIndex ? updatedPatient : p)));
+      return { success: true, patient: updatedPatient };
     }
 
     const newPatient: PatientAccount = {
@@ -129,7 +138,7 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
       email: patientData.email.trim(),
       phone: patientData.phone || '',
       district: patientData.district || 'Colombo',
-      password: patientData.password,
+      password: patientData.password || 'Pass12#',
       status: 'Active',
       createdAt: new Date().toISOString(),
     };
@@ -233,18 +242,33 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Initial load from localStorage & NestJS backend API routes
   useEffect(() => {
+    const isMockBooking = (id: string) => ['BK-84920', 'BK-77312', 'BK-65109', 'BK-52490', 'BK-91823'].includes(id);
+    const isMockPatient = (id: string) => ['pat-1', 'pat-2', 'pat-3', 'pat-4', 'pat-5', 'pat-6'].includes(id);
+
     const initStore = async () => {
       try {
         const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed.user) setUser(parsed.user);
-          if (parsed.psychiatrists && Array.isArray(parsed.psychiatrists)) setPsychiatrists(parsed.psychiatrists);
-          if (parsed.bookings && Array.isArray(parsed.bookings)) setBookings(parsed.bookings);
-          if (parsed.reviews && Array.isArray(parsed.reviews)) setReviews(parsed.reviews);
-          if (parsed.complaints && Array.isArray(parsed.complaints)) setComplaints(parsed.complaints);
+          if (parsed.psychiatrists && Array.isArray(parsed.psychiatrists) && parsed.psychiatrists.length > 0) {
+            setPsychiatrists(parsed.psychiatrists);
+          }
+          if (parsed.bookings && Array.isArray(parsed.bookings)) {
+            const actualBookings = parsed.bookings.filter((b: any) => !isMockBooking(b.id));
+            setBookings(actualBookings);
+          }
+          if (parsed.reviews && Array.isArray(parsed.reviews) && parsed.reviews.length > 0) {
+            setReviews(parsed.reviews);
+          }
+          if (parsed.complaints && Array.isArray(parsed.complaints) && parsed.complaints.length > 0) {
+            setComplaints(parsed.complaints);
+          }
           if (parsed.platformSettings) setPlatformSettings(parsed.platformSettings);
-          if (parsed.patients && Array.isArray(parsed.patients)) setPatients(parsed.patients);
+          if (parsed.patients && Array.isArray(parsed.patients)) {
+            const actualPatients = parsed.patients.filter((p: any) => !isMockPatient(p.id));
+            setPatients(actualPatients);
+          }
         }
       } catch (e) {
         console.error('Error loading saved PsyNova state:', e);
@@ -268,15 +292,18 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         if (bookingsRes.ok) {
           const bks = await bookingsRes.json();
-          if (Array.isArray(bks)) setBookings(bks);
+          if (Array.isArray(bks)) {
+            const actualBks = bks.filter((b: any) => !isMockBooking(b.id));
+            setBookings(actualBks);
+          }
         }
         if (reviewsRes.ok) {
           const revs = await reviewsRes.json();
-          if (Array.isArray(revs)) setReviews(revs);
+          if (Array.isArray(revs) && revs.length > 0) setReviews(revs);
         }
         if (complaintsRes.ok) {
           const cmps = await complaintsRes.json();
-          if (Array.isArray(cmps)) setComplaints(cmps);
+          if (Array.isArray(cmps) && cmps.length > 0) setComplaints(cmps);
         }
         if (settingsRes.ok) {
           const stgs = await settingsRes.json();
@@ -284,7 +311,10 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         if (patientsRes.ok) {
           const pats = await patientsRes.json();
-          if (Array.isArray(pats)) setPatients(pats);
+          if (Array.isArray(pats)) {
+            const actualPats = pats.filter((p: any) => !isMockPatient(p.id));
+            setPatients(actualPats);
+          }
         }
       } catch (err) {
         console.error('NestJS Backend connection error, fallback to local state:', err);
@@ -798,6 +828,21 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  const unflagReview = (reviewId: string) => {
+    setReviews((prev) =>
+      prev.map((r) => {
+        if (r.id === reviewId) {
+          return { ...r, flagged: false, adminNote: undefined };
+        }
+        return r;
+      })
+    );
+  };
+
+  const deleteReview = (reviewId: string) => {
+    setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+  };
+
   const addComplaint = (bookingId: string, reason: string, details: string) => {
     const booking = bookings.find((b) => b.id === bookingId);
     const newComplaint: Complaint = {
@@ -874,6 +919,8 @@ export const PsyNovaProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addReview,
         voteHelpfulReview,
         flagReview,
+        unflagReview,
+        deleteReview,
         addComplaint,
         resolveComplaint,
         updatePlatformSettings,

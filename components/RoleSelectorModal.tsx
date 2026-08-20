@@ -20,6 +20,7 @@ export const RoleSelectorModal: React.FC<RoleSelectorModalProps> = ({ isOpen, on
 
   // Form fields
   const [emailOrPhone, setEmailOrPhone] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [slmcRegNo, setSlmcRegNo] = useState('');
@@ -90,10 +91,17 @@ export const RoleSelectorModal: React.FC<RoleSelectorModalProps> = ({ isOpen, on
         return;
       }
       if (selectedRole === 'patient') {
+        const rawPhone = phone.trim();
+        const formattedPhone = rawPhone
+          ? rawPhone.startsWith('+94')
+            ? rawPhone
+            : `+94 ${rawPhone.replace(/^0/, '')}`
+          : '+94 77 123 4567';
+
         const res = registerPatient({
           name: fullName.trim(),
           email: emailOrPhone.trim(),
-          phone: '',
+          phone: formattedPhone,
           district,
           password,
         });
@@ -248,6 +256,37 @@ export const RoleSelectorModal: React.FC<RoleSelectorModalProps> = ({ isOpen, on
                 </div>
               )}
 
+              {selectedRole === 'patient' && authMode === 'signup' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-semibold text-[#2D3728]/80 block mb-1">Mobile Contact</label>
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. 077 123 4567"
+                      className="w-full px-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-[#2D3728] focus:outline-none focus:ring-2 focus:ring-[#768c6e]"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-[#2D3728]/80 block mb-1">District</label>
+                    <select
+                      value={district}
+                      onChange={(e) => setDistrict(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-[#768c6e]/30 bg-white text-[#2D3728] focus:outline-none"
+                    >
+                      <option value="Colombo">Colombo</option>
+                      <option value="Kandy">Kandy</option>
+                      <option value="Galle">Galle</option>
+                      <option value="Gampaha">Gampaha</option>
+                      <option value="Jaffna">Jaffna</option>
+                      <option value="Kurunegala">Kurunegala</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
               {selectedRole === 'psychiatrist' && authMode === 'signup' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -271,6 +310,7 @@ export const RoleSelectorModal: React.FC<RoleSelectorModalProps> = ({ isOpen, on
                       <option value="Colombo">Colombo</option>
                       <option value="Kandy">Kandy</option>
                       <option value="Galle">Galle</option>
+                      <option value="Gampaha">Gampaha</option>
                       <option value="Jaffna">Jaffna</option>
                       <option value="Kurunegala">Kurunegala</option>
                     </select>

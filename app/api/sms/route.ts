@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getNestServices } from '../../../server/nest-app';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const { notifyLkService, smsWayService } = await getNestServices();

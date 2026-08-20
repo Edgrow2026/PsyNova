@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getNestServices } from '../../../../../server/nest-app';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { payHereService, bookingsService, notifyLkService, smsWayService } = await getNestServices();

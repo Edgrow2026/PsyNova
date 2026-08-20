@@ -6,14 +6,14 @@ import { PatientEntity } from './entities/patient.entity';
 import { ReviewEntity } from './entities/review.entity';
 import { ComplaintEntity } from './entities/complaint.entity';
 import { SettingsEntity } from './entities/settings.entity';
-import { initialPsychiatrists, initialBookings, initialReviews, initialComplaints, initialPlatformSettings, initialPatients } from '../../lib/mockData';
+import { initialPsychiatrists, initialReviews, initialComplaints, initialPlatformSettings } from '../../lib/mockData';
 import { PatientAccount } from '../../lib/types';
 
 @Injectable()
 export class DatabaseService {
   private readonly logger = new Logger(DatabaseService.name);
   private isInitialized = false;
-  private inMemoryPatients: PatientAccount[] = [...initialPatients];
+  private inMemoryPatients: PatientAccount[] = [];
 
   async getDataSource() {
     const ds = getAppDataSource();
@@ -80,7 +80,6 @@ export class DatabaseService {
       });
     }
 
-
     // 2. Seed Psychiatrists with JSONB fields
     const docRepo = ds.getRepository(PsychiatristEntity);
     const countDocs = await docRepo.count();
@@ -112,7 +111,41 @@ export class DatabaseService {
       }
     }
 
-    // 3. Patients and Bookings are created dynamically upon patient registration/booking and saved to PostgreSQL.
+    // 3. Seed Reviews Audit
+    const revRepo = ds.getRepository(ReviewEntity);
+    const countReviews = await revRepo.count();
+    if (countReviews === 0) {
+      for (const rev of initialReviews) {
+        await revRepo.save({
+          id: rev.id,
+          doctorId: rev.doctorId,
+          patientName: rev.patientName,
+          rating: rev.rating,
+          comment: rev.text,
+          status: rev.flagged ? 'Flagged' : 'Published',
+          createdAt: new Date(rev.date),
+        });
+      }
+    }
+
+    // 4. Seed Complaints Queue
+    const cmpRepo = ds.getRepository(ComplaintEntity);
+    const countComplaints = await cmpRepo.count();
+    if (countComplaints === 0) {
+      for (const cmp of initialComplaints) {
+        await cmpRepo.save({
+          id: cmp.id,
+          bookingId: cmp.bookingId,
+          complainantType: 'patient',
+          complainantName: cmp.patientName,
+          subject: cmp.reason,
+          description: cmp.details,
+          status: cmp.status === 'Resolved' ? 'Resolved' : 'Pending Review',
+          resolutionNotes: cmp.resolutionNote || null,
+          createdAt: new Date(cmp.createdAt),
+        });
+      }
+    }
   }
 
   /**

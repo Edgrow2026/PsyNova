@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { orderId, amount, currency = 'LKR', merchantId = 'PSYNOVA_MERCHANT_102' } = await req.json();
