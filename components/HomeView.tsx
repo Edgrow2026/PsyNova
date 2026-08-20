@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { usePsyNova } from '@/lib/store';
-import { Psychiatrist, DoctorSlot } from '@/lib/types';
-import { BreathingExercise } from './BreathingExercise';
-import { DoctorModal } from './DoctorModal';
+import React, { useState, useEffect } from "react";
+import { usePsyNova } from "@/lib/store";
+import { Psychiatrist, DoctorSlot } from "@/lib/types";
+import { BreathingExercise } from "./BreathingExercise";
+import { DoctorModal } from "./DoctorModal";
 import {
   ShieldCheck,
   Lock,
@@ -18,20 +18,27 @@ import {
   Globe,
   Clock,
   ChevronRight,
-  Crown
-} from 'lucide-react';
+  Crown,
+} from "lucide-react";
 
 interface HomeViewProps {
   setActiveTab: (tab: string) => void;
   onSelectDoctorToBook: (doctor: Psychiatrist, slot: DoctorSlot) => void;
 }
 
-export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctorToBook }) => {
+export const HomeView: React.FC<HomeViewProps> = ({
+  setActiveTab,
+  onSelectDoctorToBook,
+}) => {
   const { psychiatrists, platformSettings } = usePsyNova();
-  const [selectedDoctorForModal, setSelectedDoctorForModal] = useState<Psychiatrist | null>(null);
+  const [selectedDoctorForModal, setSelectedDoctorForModal] =
+    useState<Psychiatrist | null>(null);
+
+  const defaultHeroImage = "/hero_mindfulness_bg_1786600165257.jpg";
 
   // Resilient Hero Background Image state with fallback
-  const heroUrlFromSettings = platformSettings?.heroImageUrl || '/hero_bg.jpg';
+  const heroUrlFromSettings =
+    platformSettings?.heroImageUrl || defaultHeroImage;
   const [heroImgSrc, setHeroImgSrc] = useState(heroUrlFromSettings);
   const [prevSettingsImg, setPrevSettingsImg] = useState(heroUrlFromSettings);
 
@@ -41,13 +48,15 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
   }
 
   // Filter ONLY boosted psychiatrists for the Home Page Spotlight
-  const boostedDoctors = psychiatrists.filter((d) => d.status === 'approved' && d.isBoosted);
+  const boostedDoctors = psychiatrists.filter(
+    (d) => d.status === "approved" && d.isBoosted,
+  );
 
   // Rotating affirmations for narrative section
   const affirmations = [
-    '“Healing begins when you feel heard, safe, and truly understood in your own language.”',
-    '“Mental wellbeing is not a luxury — it is the quiet foundation of a peaceful life.”',
-    '“Taking one gentle step today creates room for hope and clarity tomorrow.”',
+    "“Healing begins when you feel heard, safe, and truly understood in your own language.”",
+    "“Mental wellbeing is not a luxury — it is the quiet foundation of a peaceful life.”",
+    "“Taking one gentle step today creates room for hope and clarity tomorrow.”",
   ];
 
   const [currentAffirmationIdx, setCurrentAffirmationIdx] = useState(0);
@@ -74,10 +83,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
             className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000"
             referrerPolicy="no-referrer"
             onError={() => {
-              if (heroImgSrc !== '/hero_bg.jpg') {
-                setHeroImgSrc('/hero_bg.jpg');
+              if (heroImgSrc !== defaultHeroImage) {
+                setHeroImgSrc(defaultHeroImage);
               } else {
-                setHeroImgSrc('https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1600&auto=format&fit=crop');
+                setHeroImgSrc(
+                  "https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1600&auto=format&fit=crop",
+                );
               }
             }}
           />
@@ -93,24 +104,27 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-medium leading-tight tracking-tight text-[#F7F5EF]">
-            healing is a <br />conversation away.
+            healing is a <br />
+            conversation away.
           </h1>
 
           <p className="text-base sm:text-lg max-w-xl text-[#F7F5EF]/90 leading-relaxed font-normal">
-            Connect with SLMC-verified psychiatrists in a private, nurturing space designed for your peace of mind.
+            Connect with SLMC-verified psychiatrists in a private, nurturing
+            space designed for your peace of mind.
           </p>
 
           <div className="flex flex-wrap gap-4 pt-2">
             <button
-              onClick={() => setActiveTab('psychiatrists')}
+              onClick={() => setActiveTab("psychiatrists")}
               className="px-8 py-4 rounded-full text-base sm:text-lg font-medium shadow-md transition-all hover:opacity-95 flex items-center gap-2 bg-[#F7F5EF] text-[#2D3728]"
             >
-              Book a Consultation <ArrowRight className="w-5 h-5 text-[#768c6e]" />
+              Book a Consultation{" "}
+              <ArrowRight className="w-5 h-5 text-[#768c6e]" />
             </button>
             <button
               onClick={() => {
-                const el = document.getElementById('narrative');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                const el = document.getElementById("narrative");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
               }}
               className="px-8 py-4 rounded-full text-base sm:text-lg font-medium border border-[#F7F5EF] text-[#F7F5EF] transition-all hover:bg-white/10"
             >
@@ -126,14 +140,18 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
             <div
               className="absolute w-40 h-40 rounded-full flex flex-col items-center justify-center text-center px-4"
               style={{
-                backgroundColor: 'rgba(247, 245, 239, 0.25)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(247, 245, 239, 0.4)',
+                backgroundColor: "rgba(247, 245, 239, 0.25)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(247, 245, 239, 0.4)",
               }}
             >
               <Sparkles className="w-6 h-6 text-[#F7F5EF] mb-1" />
-              <span className="text-xs uppercase tracking-widest font-semibold text-[#F7F5EF]">Calm Presence</span>
-              <span className="text-[10px] text-[#F7F5EF]/90 mt-1">Tele-Care Space</span>
+              <span className="text-xs uppercase tracking-widest font-semibold text-[#F7F5EF]">
+                Calm Presence
+              </span>
+              <span className="text-[10px] text-[#F7F5EF]/90 mt-1">
+                Tele-Care Space
+              </span>
             </div>
           </div>
         </div>
@@ -145,22 +163,34 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
           <div className="p-2">
             <ShieldCheck className="w-8 h-8 text-[#768c6e] mx-auto mb-2" />
             <h4 className="font-bold text-sm text-[#2D3728]">SLMC Verified</h4>
-            <p className="text-xs text-[#2D3728]/70 mt-0.5">Strict credential vetting</p>
+            <p className="text-xs text-[#2D3728]/70 mt-0.5">
+              Strict credential vetting
+            </p>
           </div>
           <div className="p-2">
             <Globe className="w-8 h-8 text-[#768c6e] mx-auto mb-2" />
             <h4 className="font-bold text-sm text-[#2D3728]">3 Languages</h4>
-            <p className="text-xs text-[#2D3728]/70 mt-0.5">Sinhala, Tamil & English</p>
+            <p className="text-xs text-[#2D3728]/70 mt-0.5">
+              Sinhala, Tamil & English
+            </p>
           </div>
           <div className="p-2">
             <Lock className="w-8 h-8 text-[#768c6e] mx-auto mb-2" />
-            <h4 className="font-bold text-sm text-[#2D3728]">Private & Discrete</h4>
-            <p className="text-xs text-[#2D3728]/70 mt-0.5">End-to-end confidentiality</p>
+            <h4 className="font-bold text-sm text-[#2D3728]">
+              Private & Discrete
+            </h4>
+            <p className="text-xs text-[#2D3728]/70 mt-0.5">
+              End-to-end confidentiality
+            </p>
           </div>
           <div className="p-2">
             <Clock className="w-8 h-8 text-[#768c6e] mx-auto mb-2" />
-            <h4 className="font-bold text-sm text-[#2D3728]">Islandwide Access</h4>
-            <p className="text-xs text-[#2D3728]/70 mt-0.5">Colombo to Jaffna & Galle</p>
+            <h4 className="font-bold text-sm text-[#2D3728]">
+              Islandwide Access
+            </h4>
+            <p className="text-xs text-[#2D3728]/70 mt-0.5">
+              Colombo to Jaffna & Galle
+            </p>
           </div>
         </div>
       </section>
@@ -170,27 +200,36 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-800 border border-amber-500/30 mb-2">
-              <Crown className="w-3.5 h-3.5 text-amber-600" /> Crown Boosted Specialists
+              <Crown className="w-3.5 h-3.5 text-amber-600" /> Crown Boosted
+              Specialists
             </span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[#2D3728]">Featured Specialists</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#2D3728]">
+              Featured Specialists
+            </h2>
             <p className="text-xs sm:text-sm text-[#2D3728]/70 mt-1">
-              Top SLMC-verified practitioners available for immediate telehealth booking.
+              Top SLMC-verified practitioners available for immediate telehealth
+              booking.
             </p>
           </div>
 
           <button
-            onClick={() => setActiveTab('psychiatrists')}
+            onClick={() => setActiveTab("psychiatrists")}
             className="btn-secondary text-xs sm:text-sm shrink-0 flex items-center gap-1"
           >
-            View All Approved Specialists ({psychiatrists.filter(d => d.status === 'approved').length}) <ChevronRight className="w-4 h-4" />
+            View All Approved Specialists (
+            {psychiatrists.filter((d) => d.status === "approved").length}){" "}
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
         {boostedDoctors.length === 0 ? (
           <div className="p-8 text-center rounded-[24px] bg-[#F7F5EF] border border-[#768c6e]/20 text-[#2D3728]/70">
-            <p className="text-sm font-medium">All approved psychiatrists are currently listed in the main directory.</p>
+            <p className="text-sm font-medium">
+              All approved psychiatrists are currently listed in the main
+              directory.
+            </p>
             <button
-              onClick={() => setActiveTab('psychiatrists')}
+              onClick={() => setActiveTab("psychiatrists")}
               className="mt-4 btn-primary text-xs"
             >
               Browse Full Doctor Directory
@@ -205,7 +244,10 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
                 className="psynova-card p-6 flex flex-col justify-between cursor-pointer group relative overflow-hidden"
               >
                 {/* Crown Badge - Icon Only */}
-                <div className="absolute top-4 right-4 z-10 flex items-center justify-center p-2 rounded-full bg-amber-500 text-white font-bold text-xs shadow-sm" title="Crown Boosted">
+                <div
+                  className="absolute top-4 right-4 z-10 flex items-center justify-center p-2 rounded-full bg-amber-500 text-white font-bold text-xs shadow-sm"
+                  title="Crown Boosted"
+                >
                   <Crown className="w-4 h-4" />
                 </div>
 
@@ -221,19 +263,27 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
                         {doc.name}
                       </h3>
                       <p className="text-xs text-[#2D3728]/80">{doc.title}</p>
-                      <p className="text-[11px] font-mono text-[#6B7D5E] mt-0.5">{doc.district} District</p>
+                      <p className="text-[11px] font-mono text-[#6B7D5E] mt-0.5">
+                        {doc.district} District
+                      </p>
                     </div>
                   </div>
 
-                  <p className="text-xs text-[#2D3728]/80 line-clamp-2 leading-relaxed">{doc.bio}</p>
+                  <p className="text-xs text-[#2D3728]/80 line-clamp-2 leading-relaxed">
+                    {doc.bio}
+                  </p>
 
                   <div className="flex items-center justify-between text-xs pt-2 border-t border-[#768c6e]/15">
                     <div className="flex items-center gap-1 font-semibold text-amber-700">
                       <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
                       <span>{doc.rating.toFixed(1)}</span>
-                      <span className="text-[#2D3728]/60 font-normal">({doc.reviewCount})</span>
+                      <span className="text-[#2D3728]/60 font-normal">
+                        ({doc.reviewCount})
+                      </span>
                     </div>
-                    <span className="font-semibold text-[#2D3728]">{doc.languages.join(', ')}</span>
+                    <span className="font-semibold text-[#2D3728]">
+                      {doc.languages.join(", ")}
+                    </span>
                   </div>
                 </div>
 
@@ -262,10 +312,15 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
               A Safe Space Where Mental Healthcare Meets Compassion and Respect
             </h2>
             <p className="text-sm sm:text-base text-[#2D3728]/85 leading-relaxed">
-              Finding quality psychiatric care in Sri Lanka should never be overwhelming. PsyNova was founded to eliminate stigma, reduce travel burdens, and offer direct access to top hospital consultants in a calm, private digital setting.
+              Finding quality psychiatric care in Sri Lanka should never be
+              overwhelming. PsyNova was founded to eliminate stigma, reduce
+              travel burdens, and offer direct access to top hospital
+              consultants in a calm, private digital setting.
             </p>
             <p className="text-sm text-[#2D3728]/80 leading-relaxed">
-              Whether you are managing anxiety, depression, mood changes, or seeking guidance for a loved one, our practitioners listen deeply and design personalized care paths tailored to your background.
+              Whether you are managing anxiety, depression, mood changes, or
+              seeking guidance for a loved one, our practitioners listen deeply
+              and design personalized care paths tailored to your background.
             </p>
           </div>
 
@@ -281,7 +336,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
                   <span
                     key={i}
                     className={`w-2 h-2 rounded-full transition-all ${
-                      i === currentAffirmationIdx ? 'bg-[#768c6e] w-6' : 'bg-[#768c6e]/30'
+                      i === currentAffirmationIdx
+                        ? "bg-[#768c6e] w-6"
+                        : "bg-[#768c6e]/30"
                     }`}
                   />
                 ))}
@@ -294,8 +351,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
       {/* 4. Four Pillars of Care */}
       <section className="max-w-7xl mx-auto px-4 sm:px-8 pt-6">
         <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-          <span className="text-xs font-semibold text-[#6B7D5E] uppercase tracking-wider">Core Standards</span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-[#2D3728]">The Four Pillars of PsyNova Care</h2>
+          <span className="text-xs font-semibold text-[#6B7D5E] uppercase tracking-wider">
+            Core Standards
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[#2D3728]">
+            The Four Pillars of PsyNova Care
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -303,9 +364,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
             <div className="w-12 h-12 rounded-2xl bg-[#768c6e]/15 text-[#768c6e] flex items-center justify-center">
               <ShieldCheck className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-base text-[#2D3728]">1. SLMC Verification</h3>
+            <h3 className="font-bold text-base text-[#2D3728]">
+              1. SLMC Verification
+            </h3>
             <p className="text-xs text-[#2D3728]/80 leading-relaxed">
-              Every specialist undergoes manual Sri Lanka Medical Council credential checking before joining.
+              Every specialist undergoes manual Sri Lanka Medical Council
+              credential checking before joining.
             </p>
           </div>
 
@@ -313,9 +377,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
             <div className="w-12 h-12 rounded-2xl bg-[#768c6e]/15 text-[#768c6e] flex items-center justify-center">
               <Lock className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-base text-[#2D3728]">2. Total Privacy</h3>
+            <h3 className="font-bold text-base text-[#2D3728]">
+              2. Total Privacy
+            </h3>
             <p className="text-xs text-[#2D3728]/80 leading-relaxed">
-              Strict identity protection and encrypted tele-rooms keep your consultation private.
+              Strict identity protection and encrypted tele-rooms keep your
+              consultation private.
             </p>
           </div>
 
@@ -323,9 +390,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
             <div className="w-12 h-12 rounded-2xl bg-[#768c6e]/15 text-[#768c6e] flex items-center justify-center">
               <Globe className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-base text-[#2D3728]">3. Multilingual</h3>
+            <h3 className="font-bold text-base text-[#2D3728]">
+              3. Multilingual
+            </h3>
             <p className="text-xs text-[#2D3728]/80 leading-relaxed">
-              Receive guidance naturally in Sinhala, Tamil, or English based on your comfort.
+              Receive guidance naturally in Sinhala, Tamil, or English based on
+              your comfort.
             </p>
           </div>
 
@@ -333,9 +403,12 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
             <div className="w-12 h-12 rounded-2xl bg-[#768c6e]/15 text-[#768c6e] flex items-center justify-center">
               <Heart className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-base text-[#2D3728]">4. Holistic Care</h3>
+            <h3 className="font-bold text-base text-[#2D3728]">
+              4. Holistic Care
+            </h3>
             <p className="text-xs text-[#2D3728]/80 leading-relaxed">
-              Long-term wellness strategies combining therapy, lifestyle, and medical guidance.
+              Long-term wellness strategies combining therapy, lifestyle, and
+              medical guidance.
             </p>
           </div>
         </div>
@@ -353,11 +426,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
             Begin Your Care Journey in Total Privacy Today
           </h2>
           <p className="text-sm sm:text-base text-[#2D3728]/85 max-w-2xl mx-auto leading-relaxed">
-            Our compassionate platform connects you directly with verified consultant psychiatrists. No waiting, no exposure, just private mental healthcare tailored to you.
+            Our compassionate platform connects you directly with verified
+            consultant psychiatrists. No waiting, no exposure, just private
+            mental healthcare tailored to you.
           </p>
           <div className="pt-2">
             <button
-              onClick={() => setActiveTab('psychiatrists')}
+              onClick={() => setActiveTab("psychiatrists")}
               className="btn-primary px-8 py-3.5 text-base shadow-lg"
             >
               Explore Available Psychiatrists <ArrowRight className="w-5 h-5" />
