@@ -30,6 +30,16 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
   const { psychiatrists, platformSettings } = usePsyNova();
   const [selectedDoctorForModal, setSelectedDoctorForModal] = useState<Psychiatrist | null>(null);
 
+  // Resilient Hero Background Image state with fallback
+  const heroUrlFromSettings = platformSettings?.heroImageUrl || '/hero_bg.jpg';
+  const [heroImgSrc, setHeroImgSrc] = useState(heroUrlFromSettings);
+  const [prevSettingsImg, setPrevSettingsImg] = useState(heroUrlFromSettings);
+
+  if (heroUrlFromSettings !== prevSettingsImg) {
+    setPrevSettingsImg(heroUrlFromSettings);
+    setHeroImgSrc(heroUrlFromSettings);
+  }
+
   // Filter ONLY boosted psychiatrists for the Home Page Spotlight
   const boostedDoctors = psychiatrists.filter((d) => d.status === 'approved' && d.isBoosted);
 
@@ -51,18 +61,28 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
 
   return (
     <div className="w-full space-y-16 pb-12">
-      {/* 1. Full-Bleed Hero Section with Cover Image */}
-      <section className="relative w-full min-h-[85vh] flex items-center justify-between px-6 sm:px-12 lg:px-16 py-16 overflow-hidden rounded-b-[40px] shadow-xl">
+      {/* 1. Full-Bleed Hero Section with Cover Image and Clinical Mindfulness Theme */}
+      <section
+        id="home"
+        className="relative w-full min-h-[75vh] md:min-h-[85vh] bg-[#768c6e] flex items-center justify-between px-6 sm:px-12 lg:px-16 py-16 overflow-hidden rounded-b-[40px] shadow-xl"
+      >
         {/* Full-Covered Background Image */}
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 bg-[#768c6e]">
           <img
-            src={platformSettings?.heroImageUrl || "/hero-mindfulness.jpg"}
-            alt="Calm mindfulness healthcare setting"
+            src={heroImgSrc}
+            alt="Clinical mindfulness healthcare setting"
             className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000"
             referrerPolicy="no-referrer"
+            onError={() => {
+              if (heroImgSrc !== '/hero_bg.jpg') {
+                setHeroImgSrc('/hero_bg.jpg');
+              } else {
+                setHeroImgSrc('https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=1600&auto=format&fit=crop');
+              }
+            }}
           />
-          {/* Theme overlay gradient with optical opacity for visible, warm background image */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#2D3728]/90 via-[#2D3728]/60 to-[#2D3728]/35" />
+          {/* Theme overlay gradient with optical opacity for visible, warm mindfulness background image */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#2D3728]/95 via-[#2D3728]/65 to-black/20 lg:via-[#2D3728]/50 lg:to-transparent" />
         </div>
 
         {/* Left Hero Column */}
@@ -92,7 +112,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ setActiveTab, onSelectDoctor
                 const el = document.getElementById('narrative');
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="px-8 py-4 rounded-full text-base sm:text-lg font-medium border-2 border-[#F7F5EF]/80 text-[#F7F5EF] transition-all hover:bg-white/10"
+              className="px-8 py-4 rounded-full text-base sm:text-lg font-medium border border-[#F7F5EF] text-[#F7F5EF] transition-all hover:bg-white/10"
             >
               Our Mission
             </button>

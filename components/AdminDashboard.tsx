@@ -1035,17 +1035,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeSubTab = '
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
-                    value={platformSettings.heroImageUrl || '/hero-mindfulness.jpg'}
+                    value={platformSettings.heroImageUrl || '/hero_bg.jpg'}
                     onChange={(e) => updatePlatformSettings({ heroImageUrl: e.target.value })}
                     className="flex-1 px-4 py-2 rounded-xl border border-[#768c6e]/30 bg-white text-xs font-mono"
-                    placeholder="/hero-mindfulness.jpg or custom image URL"
+                    placeholder="/hero_bg.jpg or custom image URL"
                   />
                   <button
                     type="button"
-                    onClick={() => updatePlatformSettings({ heroImageUrl: '/hero-mindfulness.jpg' })}
+                    onClick={() => updatePlatformSettings({ heroImageUrl: '/hero_bg.jpg' })}
                     className="btn-secondary text-[11px] py-2 px-3 shrink-0"
                   >
-                    Reset to Serene Meditation
+                    Reset to Mindfulness Photography
                   </button>
                 </div>
                 <p className="text-[11px] text-[#2D3728]/60 mt-1">

@@ -3,7 +3,7 @@ import { Psychiatrist, Review, Booking, Complaint, PlatformSettings, PatientAcco
 export const initialPlatformSettings: PlatformSettings = {
   commissionRate: 18,
   maxBoostedDoctors: 9,
-  heroImageUrl: '/hero-mindfulness.jpg',
+  heroImageUrl: '/hero_bg.jpg',
 };
 
 const getFutureSlotISO = (daysAhead: number, hour: number, minute: number = 0) => {
